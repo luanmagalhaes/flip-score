@@ -11,9 +11,9 @@ interface CardArtProps {
 
 const skins: Record<Face, string> = {
   number: "bg-paper text-ink",
-  freeze: "bg-sky text-ink",
-  flipthree: "bg-gold text-ink",
-  second: "bg-flame text-paper",
+  freeze: "bg-freeze text-ink",
+  flipthree: "bg-flipthree text-ink",
+  second: "bg-second text-paper",
   modifier: "bg-gold text-ink",
 };
 

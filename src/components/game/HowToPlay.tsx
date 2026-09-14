@@ -141,7 +141,7 @@ const slides: Slide[] = [
   },
   {
     title: "As cartas especiais",
-    tone: "bg-sky text-ink",
+    tone: "bg-freeze text-ink",
     art: (
       <div className="flex items-end justify-center gap-1.5">
         <CardArt face="freeze" label="FREEZE" />
@@ -155,41 +155,63 @@ const slides: Slide[] = [
           Suas cartas são em inglês, então segue o nome original e o que fazer com cada uma.
         </p>
 
-        <div className="rounded-2xl border-2 border-ink bg-sky p-3">
-          <div className="flex items-center gap-2">
+        <div className="rounded-2xl border-2 border-ink bg-freeze p-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Original>FREEZE</Original>
             <span className="display text-sm text-ink">Congelar</span>
+            <span className="display rounded-md bg-ink/10 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-ink">
+              usa na hora
+            </span>
           </div>
           <p className="mt-1.5 text-xs leading-snug text-ink/80">
-            Quem recebe <Good>para na hora</Good>, guarda os pontos que já tinha e sai da rodada.
-            Pode ser dada a qualquer pessoa ainda viva, inclusive você.
+            Não dá para guardar: assim que você vira, escolhe em quem cai. Quem recebe{" "}
+            <Good>para na hora</Good>, guarda os pontos que já tinha e sai da rodada. Pode ser em
+            você mesmo.
           </p>
         </div>
 
-        <div className="rounded-2xl border-2 border-ink bg-gold p-3">
-          <div className="flex items-center gap-2">
+        <div className="rounded-2xl border-2 border-ink bg-flipthree p-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Original>FLIP THREE</Original>
             <span className="display text-sm text-ink">Vire três</span>
+            <span className="display rounded-md bg-ink/10 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-ink">
+              usa na hora
+            </span>
           </div>
           <p className="mt-1.5 text-xs leading-snug text-ink/80">
-            Quem recebe é obrigado a virar <Bad>três cartas seguidas</Bad>. Só para antes se
-            estourar ou fechar o Flip 7. É a carta mais cruel do baralho.
+            Também é na hora, sem guardar. Quem recebe é obrigado a virar{" "}
+            <Bad>três cartas seguidas</Bad>, só parando antes se estourar ou fechar o Flip 7. É a
+            carta mais cruel do baralho.
           </p>
         </div>
 
-        <div className="rounded-2xl border-2 border-ink bg-flame-soft p-3">
-          <div className="flex items-center gap-2">
-            <Original>SECOND CHANCE</Original>
-            <span className="display text-sm text-ink">Segunda chance</span>
+        <div className="rounded-2xl border-2 border-ink bg-second p-3 text-paper">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="display rounded-md bg-paper px-1.5 py-0.5 text-[0.7rem] text-ink">
+              SECOND CHANCE
+            </span>
+            <span className="display text-sm">Segunda chance</span>
+            <span className="display rounded-md bg-ink/25 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider">
+              guarda
+            </span>
           </div>
-          <p className="mt-1.5 text-xs leading-snug text-ink/80">
-            Guarde na frente. Quando vier o número repetido, descarte os dois e{" "}
-            <Good>continue vivo</Good>. Vale só contra número repetido, não contra o Freeze.
+          <p className="mt-1.5 text-xs leading-snug text-paper/90">
+            Esta você <strong>não</strong> joga em ninguém. Fica na sua frente até o dia que vier o
+            número repetido: aí descarta os dois e continua vivo. Só vale contra número repetido,
+            nunca contra o Freeze.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border-2 border-dashed border-ink/35 p-3">
+          <p className="text-xs leading-snug text-ink/75">
+            <strong className="text-ink">Vale para as duas de cima:</strong> só podem cair em quem
+            ainda está de pé na rodada. Quem já parou ou estourou está fora de alcance.
           </p>
         </div>
 
         <p className="text-center text-xs text-ink/60">
-          Carta de ação recebida quando você é o último de pé tem que ser usada em você mesmo.
+          E se você for o último de pé quando virar uma delas, não tem escapatória: usa em você
+          mesmo.
         </p>
       </div>
     ),
