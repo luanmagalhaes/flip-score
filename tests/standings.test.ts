@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { champions, pointsToGo, rank, reachedTarget } from "@/lib/game/standings";
-import { bustChance, copiesOf, numberCards, targetScore } from "@/lib/game/rules";
+import { copiesOf, numberCards, targetScore } from "@/lib/game/rules";
 
 describe("classificação", () => {
   it("ordena do maior para o menor", () => {
@@ -81,19 +81,5 @@ describe("baralho do Flip 7", () => {
     const total = numberCards().reduce((sum, value) => sum + copiesOf(value), 0);
 
     expect(total).toBe(79);
-  });
-});
-
-describe("risco de estourar", () => {
-  it("é zero antes de virar qualquer carta", () => {
-    expect(bustChance([])).toBe(0);
-  });
-
-  it("cresce conforme a pessoa acumula números altos", () => {
-    expect(bustChance([12])).toBeGreaterThan(bustChance([1]));
-  });
-
-  it("não passa de um", () => {
-    expect(bustChance(numberCards())).toBeLessThanOrEqual(1);
   });
 });

@@ -8,7 +8,7 @@ import { SetupScreen } from "@/components/game/SetupScreen";
 import { VictoryScreen } from "@/components/game/VictoryScreen";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { totalFor } from "@/lib/game/scoring";
-import { sound, unlockSound } from "@/lib/sound";
+import { applyMuted, unlockSound } from "@/lib/sound";
 import { champions, rank } from "@/lib/game/standings";
 import {
   clearMatch,
@@ -16,6 +16,9 @@ import {
   rememberTutorialSeen,
   saveMatch,
   serverMatchSnapshot,
+  mutedSnapshot,
+  rememberMuted,
+  serverMutedSnapshot,
   serverTutorialSnapshot,
   subscribeMatch,
   tutorialSnapshot,
@@ -38,6 +41,11 @@ export function ScoreApp() {
   const [lane, setLane] = useState<Player[] | null>(null);
   const [collected, setCollected] = useState<Record<string, RoundEntry>>({});
   const [confirmingQuit, setConfirmingQuit] = useState(false);
+  const quiet = useSyncExternalStore(subscribeMatch, mutedSnapshot, serverMutedSnapshot);
+
+  useEffect(() => {
+    applyMuted(quiet);
+  }, [quiet]);
 
   useEffect(() => {
     const prime = () => unlockSound();
@@ -128,6 +136,8 @@ export function ScoreApp() {
             })
           }
           onRules={() => setAskedRules(true)}
+          quiet={quiet}
+          onQuiet={(next) => rememberMuted(next)}
         />
       </>
     );
@@ -203,6 +213,8 @@ export function ScoreApp() {
           })
         }
         onRules={() => setAskedRules(true)}
+        quiet={quiet}
+        onQuiet={(next) => rememberMuted(next)}
         onQuit={() => setConfirmingQuit(true)}
       />
 

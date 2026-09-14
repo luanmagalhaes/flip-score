@@ -37,12 +37,3 @@ export function numberCards(): number[] {
 export function copiesOf(value: number): number {
   return cardCopies[value] ?? 0;
 }
-
-export function bustChance(taken: readonly number[]): number {
-  const total = numberCards().reduce((sum, value) => sum + copiesOf(value), 0);
-  const gone = taken.reduce((sum, value) => sum + 1, 0);
-  const risky = taken.reduce((sum, value) => sum + (copiesOf(value) - 1), 0);
-  const left = total - gone;
-
-  return left <= 0 ? 0 : risky / left;
-}

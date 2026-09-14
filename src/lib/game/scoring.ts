@@ -1,4 +1,4 @@
-import { flipSevenBonus, flipSevenCount, modifiers, type Modifier } from "@/lib/game/rules";
+import { flipSevenBonus, flipSevenCount, type Modifier } from "@/lib/game/rules";
 
 export interface RoundEntry {
   numbers: number[];
@@ -17,10 +17,6 @@ export interface RoundBreakdown {
 
 export function emptyRound(): RoundEntry {
   return { numbers: [], modifiers: [], busted: false };
-}
-
-export function isModifier(value: string): value is Modifier {
-  return (modifiers as readonly string[]).includes(value);
 }
 
 export function breakdown(entry: RoundEntry): RoundBreakdown {

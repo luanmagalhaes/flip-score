@@ -18,6 +18,8 @@ interface MatchScreenProps {
   onNewRound: () => void;
   onUndo: () => void;
   onRules: () => void;
+  quiet: boolean;
+  onQuiet: (next: boolean) => void;
   onQuit: () => void;
 }
 
@@ -29,6 +31,8 @@ export function MatchScreen({
   onNewRound,
   onUndo,
   onRules,
+  quiet,
+  onQuiet,
   onQuit,
 }: MatchScreenProps) {
   const played = Math.max(0, roundNumber - 1);
@@ -64,6 +68,15 @@ export function MatchScreen({
           ← Encerrar
         </button>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onQuiet(!quiet)}
+            aria-label={quiet ? "Ligar os sons" : "Desligar os sons"}
+            title={quiet ? "Ligar os sons" : "Desligar os sons"}
+            className="display cursor-pointer rounded-full border-2 border-ink bg-paper px-2.5 py-1 text-xs text-ink transition-colors hover:bg-cream"
+          >
+            {quiet ? "som off" : "som on"}
+          </button>
           <button
             type="button"
             onClick={onRules}

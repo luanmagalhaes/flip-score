@@ -2,6 +2,7 @@ import type { Match } from "@/types/game";
 
 const matchKey = "flipscore.match";
 const tutorialKey = "flipscore.tutorial";
+const mutedKey = "flipscore.muted";
 const listeners = new Set<() => void>();
 
 let cachedRaw: string | null = null;
@@ -84,6 +85,28 @@ export function serverTutorialSnapshot(): boolean {
 export function rememberTutorialSeen() {
   try {
     window.localStorage.setItem(tutorialKey, "1");
+  } catch {
+    return;
+  }
+
+  announce();
+}
+
+export function mutedSnapshot(): boolean {
+  try {
+    return window.localStorage.getItem(mutedKey) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function serverMutedSnapshot(): boolean {
+  return false;
+}
+
+export function rememberMuted(next: boolean) {
+  try {
+    window.localStorage.setItem(mutedKey, next ? "1" : "0");
   } catch {
     return;
   }

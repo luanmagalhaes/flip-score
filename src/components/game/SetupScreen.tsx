@@ -18,9 +18,19 @@ interface SetupScreenProps {
   onRemove: (playerId: string) => void;
   onStart: () => void;
   onRules: () => void;
+  quiet: boolean;
+  onQuiet: (next: boolean) => void;
 }
 
-export function SetupScreen({ roster, onAdd, onRemove, onStart, onRules }: SetupScreenProps) {
+export function SetupScreen({
+  roster,
+  onAdd,
+  onRemove,
+  onStart,
+  onRules,
+  quiet,
+  onQuiet,
+}: SetupScreenProps) {
   const [name, setName] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
@@ -79,13 +89,23 @@ export function SetupScreen({ roster, onAdd, onRemove, onStart, onRules }: Setup
               ? `Começar a corrida até ${targetScore}`
               : `Faltam ${minPlayers - roster.length} para começar`}
           </Button>
-          <button
-            type="button"
-            onClick={onRules}
-            className="display cursor-pointer rounded-xl px-3 py-1.5 text-sm text-ink/60 transition-colors hover:text-ink"
-          >
-            Como se joga?
-          </button>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={onRules}
+              className="display cursor-pointer rounded-xl px-3 py-1.5 text-sm text-ink/60 transition-colors hover:text-ink"
+            >
+              Como se joga?
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuiet(!quiet)}
+              aria-label={quiet ? "Ligar os sons" : "Desligar os sons"}
+              className="display cursor-pointer rounded-xl px-3 py-1.5 text-sm text-ink/60 transition-colors hover:text-ink"
+            >
+              {quiet ? "som off" : "som on"}
+            </button>
+          </div>
         </div>
       }
     >
