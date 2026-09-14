@@ -86,7 +86,7 @@ export function RoundSheet({
               onClick={onBack}
               className="display shrink-0 cursor-pointer rounded-xl px-2 py-1 text-xs text-ink/50 transition-colors hover:text-ink"
             >
-              voltar
+              Voltar
             </button>
           </div>
         </div>

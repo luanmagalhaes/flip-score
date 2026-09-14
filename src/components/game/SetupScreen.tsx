@@ -103,7 +103,7 @@ export function SetupScreen({
               aria-label={quiet ? "Ligar os sons" : "Desligar os sons"}
               className="display cursor-pointer rounded-xl px-3 py-1.5 text-sm text-ink/60 transition-colors hover:text-ink"
             >
-              {quiet ? "som off" : "som on"}
+              {quiet ? "Som off" : "Som on"}
             </button>
           </div>
         </div>
@@ -131,7 +131,7 @@ export function SetupScreen({
           >
             <Avatar name={name || "?"} photo={photo} size="lg" />
             <span className="display absolute -bottom-1 -right-1 rounded-lg border-2 border-ink bg-gold px-1.5 py-0.5 text-[0.6rem] text-ink">
-              {photo ? "trocar" : "foto"}
+              {photo ? "Trocar" : "Foto"}
             </span>
           </button>
 
@@ -207,7 +207,7 @@ export function SetupScreen({
                   aria-label={`Tirar ${person.name} da mesa`}
                   className="display shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs text-ink/40 transition-colors hover:bg-flame hover:text-paper"
                 >
-                  tirar
+                  Tirar
                 </button>
               </li>
             ))}

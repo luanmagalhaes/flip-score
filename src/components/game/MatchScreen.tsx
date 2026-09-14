@@ -75,14 +75,14 @@ export function MatchScreen({
             title={quiet ? "Ligar os sons" : "Desligar os sons"}
             className="display cursor-pointer rounded-full border-2 border-ink bg-paper px-2.5 py-1 text-xs text-ink transition-colors hover:bg-cream"
           >
-            {quiet ? "som off" : "som on"}
+            {quiet ? "Som off" : "Som on"}
           </button>
           <button
             type="button"
             onClick={onRules}
             className="display cursor-pointer rounded-full border-2 border-ink bg-paper px-2.5 py-1 text-xs text-ink transition-colors hover:bg-cream"
           >
-            regras
+            Regras
           </button>
           <Wordmark size="sm" />
         </div>
