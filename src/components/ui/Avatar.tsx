@@ -1,6 +1,6 @@
 import { initialsFor } from "@/lib/photo";
 
-type AvatarSize = "sm" | "md" | "lg" | "xl";
+type AvatarSize = "sm" | "md" | "lg" | "xl" | "hero";
 
 interface AvatarProps {
   name: string;
@@ -15,6 +15,7 @@ const sizes: Record<AvatarSize, string> = {
   md: "h-12 w-12 text-sm",
   lg: "h-20 w-20 text-xl",
   xl: "h-36 w-36 text-4xl sm:h-44 sm:w-44",
+  hero: "h-52 w-52 text-6xl sm:h-64 sm:w-64",
 };
 
 export function Avatar({ name, photo, size = "md", className = "", glow = false }: AvatarProps) {

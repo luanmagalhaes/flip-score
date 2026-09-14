@@ -5,6 +5,7 @@ import { BustSlam } from "@/components/game/BustSlam";
 import { FlipSevenBurst } from "@/components/game/FlipSevenBurst";
 import { sound } from "@/lib/sound";
 import { Avatar } from "@/components/ui/Avatar";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Button } from "@/components/ui/Button";
 import { breakdown, emptyRound } from "@/lib/game/scoring";
 import { flipSevenCount, modifiers, numberCards, type Modifier } from "@/lib/game/rules";
@@ -31,6 +32,7 @@ export function RoundSheet({
   const [entry, setEntry] = useState<RoundEntry>(emptyRound());
   const [burst, setBurst] = useState(false);
   const [slam, setSlam] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const detail = breakdown(entry);
   const picked = new Set(entry.numbers);
 
@@ -67,6 +69,55 @@ export function RoundSheet({
     <>
       {burst ? <FlipSevenBurst onDone={() => setBurst(false)} /> : null}
       {slam ? <BustSlam player={player} onDone={() => setSlam(false)} /> : null}
+
+      {confirming ? (
+        <ConfirmModal
+          title={`Fechar a rodada de ${player.name}?`}
+          confirmLabel="Isso mesmo, salvar"
+          cancelLabel="Deixa eu conferir"
+          body={
+            <>
+              {entry.busted ? (
+                <p className="rounded-2xl border-2 border-ink bg-flame px-3 py-2.5 text-center font-semibold text-paper">
+                  Vai entrar como estouro: {player.name} fica com 0 nesta rodada.
+                </p>
+              ) : (
+                <>
+                  <p>
+                    Vai entrar{" "}
+                    <strong className="text-ink">
+                      {detail.total} {detail.total === 1 ? "ponto" : "pontos"}
+                    </strong>{" "}
+                    para {player.name}.
+                  </p>
+                  <ul className="mt-2 flex flex-col gap-1 rounded-2xl bg-cream px-3 py-2 text-xs">
+                    <li>
+                      Números:{" "}
+                      {entry.numbers.length === 0
+                        ? "nenhum"
+                        : [...new Set(entry.numbers)].sort((a, b) => a - b).join(", ")}
+                    </li>
+                    {entry.modifiers.length > 0 ? (
+                      <li>Bônus: {entry.modifiers.join(", ")}</li>
+                    ) : null}
+                    {detail.flipSeven ? <li>Flip 7 fechado</li> : null}
+                  </ul>
+                </>
+              )}
+              <p className="mt-2 text-xs text-ink/60">
+                Depois de salvar a mesa inteira, dá para apagar a rodada toda no placar — mas não
+                só a de uma pessoa.
+              </p>
+            </>
+          }
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
+            setConfirming(false);
+            sound.saved();
+            onSave(entry);
+          }}
+        />
+      ) : null}
 
     <div className="fixed inset-0 z-[55] flex items-end justify-center bg-ink/75 p-3 sm:items-center">
       <div className="animate-card-pop flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-hidden rounded-[1.75rem] border-4 border-ink bg-paper shadow-[0_14px_0_var(--color-ink)]">
@@ -210,15 +261,7 @@ export function RoundSheet({
         </div>
 
         <div className="shrink-0 border-t-2 border-ink/15 px-4 pb-4 pt-3">
-          <Button
-            variant="ink"
-            size="lg"
-            fullWidth
-            onClick={() => {
-              sound.saved();
-              onSave(entry);
-            }}
-          >
+          <Button variant="ink" size="lg" fullWidth onClick={() => setConfirming(true)}>
             Salvar e ir para o próximo
           </Button>
         </div>

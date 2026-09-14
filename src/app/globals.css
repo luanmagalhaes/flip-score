@@ -250,6 +250,35 @@ button:disabled {
   will-change: transform, opacity;
 }
 
+@keyframes champion-zoom {
+  0% { transform: scale(0.18) rotate(-10deg); opacity: 0; }
+  45% { transform: scale(1.22) rotate(3deg); opacity: 1; }
+  68% { transform: scale(0.98) rotate(-1deg); }
+  100% { transform: scale(1.06) rotate(0deg); opacity: 1; }
+}
+
+@keyframes champion-breathe {
+  0%, 100% { transform: scale(1.06); }
+  50% { transform: scale(1.13); }
+}
+
+@keyframes ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@utility animate-champion-zoom {
+  animation:
+    champion-zoom 1100ms var(--ease-swing) both,
+    champion-breathe 3400ms ease-in-out 1100ms infinite;
+  will-change: transform, opacity;
+}
+
+@utility animate-ring-spin {
+  animation: ring-spin 9s linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

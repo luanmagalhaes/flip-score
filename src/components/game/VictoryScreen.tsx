@@ -53,16 +53,20 @@ export function VictoryScreen({
         <div className="flex flex-col items-center gap-4 text-center">
           <Wordmark size="sm" />
 
-          <div className="animate-crown-drop relative">
-            <Avatar
-              name={champion?.name ?? "Campeã"}
-              photo={champion?.photo ?? null}
-              size="xl"
-              glow
-            />
-            <span className="display absolute -right-3 -top-3 rotate-12 rounded-2xl border-4 border-ink bg-gold px-3 py-1 text-xl text-ink shadow-[0_5px_0_var(--color-ink)]">
-              {totals[champion?.id ?? ""] ?? 0}
-            </span>
+          <div className="relative flex items-center justify-center py-3">
+            <span className="foil-band animate-ring-spin absolute h-[17rem] w-[17rem] rounded-full opacity-40 blur-xl sm:h-[21rem] sm:w-[21rem]" />
+
+            <div className="animate-champion-zoom relative">
+              <Avatar
+                name={champion?.name ?? "Campeã"}
+                photo={champion?.photo ?? null}
+                size="hero"
+                glow
+              />
+              <span className="display absolute -right-4 -top-4 rotate-12 rounded-2xl border-4 border-ink bg-gold px-4 py-1.5 text-2xl text-ink shadow-[0_6px_0_var(--color-ink)]">
+                {totals[champion?.id ?? ""] ?? 0}
+              </span>
+            </div>
           </div>
 
           <h1 className="display text-3xl leading-tight text-balance text-ink sm:text-4xl">
