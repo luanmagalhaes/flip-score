@@ -13,19 +13,11 @@ const sizes: Record<WordmarkSize, string> = {
 
 export function Wordmark({ size = "md", className = "" }: WordmarkProps) {
   return (
-    <span className={`inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-1.5 ${className}`}>
-      <span
-        className={`display leading-none text-ink ${sizes[size]}`}
-        style={{ textShadow: "0 2px 0 var(--color-gold)" }}
-      >
-        FLIP
-      </span>
-      <span
-        className={`display leading-none text-flame ${sizes[size]}`}
-        style={{ textShadow: "0 2px 0 var(--color-ink)" }}
-      >
-        SCORE
-      </span>
+    <span
+      className={`display foil-text animate-foil-shift inline-block max-w-full leading-none ${sizes[size]} ${className}`}
+      style={{ paddingBottom: "0.08em" }}
+    >
+      Flip Score
     </span>
   );
 }

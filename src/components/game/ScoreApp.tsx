@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { HowToPlay } from "@/components/game/HowToPlay";
 import { MatchScreen } from "@/components/game/MatchScreen";
 import { RoundSheet } from "@/components/game/RoundSheet";
@@ -8,6 +8,7 @@ import { SetupScreen } from "@/components/game/SetupScreen";
 import { VictoryScreen } from "@/components/game/VictoryScreen";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { totalFor } from "@/lib/game/scoring";
+import { sound, unlockSound } from "@/lib/sound";
 import { champions, rank } from "@/lib/game/standings";
 import {
   clearMatch,
@@ -37,6 +38,14 @@ export function ScoreApp() {
   const [lane, setLane] = useState<Player[] | null>(null);
   const [collected, setCollected] = useState<Record<string, RoundEntry>>({});
   const [confirmingQuit, setConfirmingQuit] = useState(false);
+
+  useEffect(() => {
+    const prime = () => unlockSound();
+
+    window.addEventListener("pointerdown", prime, { once: true });
+
+    return () => window.removeEventListener("pointerdown", prime);
+  }, []);
 
   const showRules = askedRules || !tutorialSeen;
   const rulesGate = showRules ? (

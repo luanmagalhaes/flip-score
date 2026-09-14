@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { BustSlam } from "@/components/game/BustSlam";
+import { FlipSevenBurst } from "@/components/game/FlipSevenBurst";
+import { sound } from "@/lib/sound";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { breakdown, emptyRound } from "@/lib/game/scoring";
@@ -26,20 +29,32 @@ export function RoundSheet({
   onBack,
 }: RoundSheetProps) {
   const [entry, setEntry] = useState<RoundEntry>(emptyRound());
+  const [burst, setBurst] = useState(false);
+  const [slam, setSlam] = useState(false);
   const detail = breakdown(entry);
   const picked = new Set(entry.numbers);
 
   const toggleNumber = (value: number) => {
-    setEntry((current) => ({
-      ...current,
-      busted: false,
-      numbers: current.numbers.includes(value)
+    setEntry((current) => {
+      const had = current.numbers.includes(value);
+      const numbers = had
         ? current.numbers.filter((kept) => kept !== value)
-        : [...current.numbers, value],
-    }));
+        : [...current.numbers, value];
+
+      if (!had && numbers.length === flipSevenCount) {
+        sound.flipSeven();
+        setBurst(true);
+      } else if (!had) {
+        sound.pick();
+      }
+
+      return { ...current, busted: false, numbers };
+    });
   };
 
   const toggleModifier = (value: Modifier) => {
+    sound.tap();
+
     setEntry((current) => ({
       ...current,
       modifiers: current.modifiers.includes(value)
@@ -49,6 +64,10 @@ export function RoundSheet({
   };
 
   return (
+    <>
+      {burst ? <FlipSevenBurst onDone={() => setBurst(false)} /> : null}
+      {slam ? <BustSlam player={player} onDone={() => setSlam(false)} /> : null}
+
     <div className="fixed inset-0 z-[55] flex items-end justify-center bg-ink/75 p-3 sm:items-center">
       <div className="animate-card-pop flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-hidden rounded-[1.75rem] border-4 border-ink bg-paper shadow-[0_14px_0_var(--color-ink)]">
         <div className="shrink-0 border-b-2 border-ink/15 bg-cream px-4 py-3">
@@ -126,7 +145,16 @@ export function RoundSheet({
           <button
             type="button"
             onClick={() =>
-              setEntry((current) => ({ ...current, busted: !current.busted }))
+              setEntry((current) => {
+                const busted = !current.busted;
+
+                if (busted) {
+                  sound.bust();
+                  setSlam(true);
+                }
+
+                return { ...current, busted };
+              })
             }
             aria-pressed={entry.busted}
             className={`display mt-4 w-full rounded-2xl border-2 border-ink py-3 text-base transition-all duration-150 ${
@@ -182,11 +210,20 @@ export function RoundSheet({
         </div>
 
         <div className="shrink-0 border-t-2 border-ink/15 px-4 pb-4 pt-3">
-          <Button variant="ink" size="lg" fullWidth onClick={() => onSave(entry)}>
+          <Button
+            variant="ink"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              sound.saved();
+              onSave(entry);
+            }}
+          >
             Salvar e ir para o próximo
           </Button>
         </div>
       </div>
     </div>
+    </>
   );
 }

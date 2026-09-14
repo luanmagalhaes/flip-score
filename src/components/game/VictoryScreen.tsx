@@ -3,6 +3,8 @@
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Confetti } from "@/components/game/Confetti";
+import { useEffect } from "react";
+import { sound } from "@/lib/sound";
 import { Screen } from "@/components/ui/Screen";
 import { Wordmark } from "@/components/ui/Wordmark";
 import { points, rounds as roundLabel } from "@/utils/plural";
@@ -25,6 +27,10 @@ export function VictoryScreen({
   onRematch,
   onNewTable,
 }: VictoryScreenProps) {
+  useEffect(() => {
+    sound.win();
+  }, []);
+
   const tie = winners.length > 1;
   const champion = winners[0];
 
