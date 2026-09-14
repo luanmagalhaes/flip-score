@@ -288,3 +288,24 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+@keyframes fan-out {
+  0% { transform: translate3d(0, 90%, 0) rotate(0deg) scale(0.7); opacity: 0; }
+  60% { transform: translate3d(0, 0, 0) rotate(calc(var(--turn) * 1.12)) scale(1.04); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) rotate(var(--turn)) scale(1); opacity: 1; }
+}
+
+@keyframes curtain-out {
+  from { transform: translate3d(0, 0, 0); opacity: 1; }
+  to { transform: translate3d(0, -100%, 0); opacity: 1; }
+}
+
+@utility animate-fan-out {
+  animation: fan-out 700ms var(--ease-swing) both;
+  will-change: transform, opacity;
+}
+
+@utility animate-curtain-out {
+  animation: curtain-out 620ms var(--ease-snap) forwards;
+  will-change: transform;
+}

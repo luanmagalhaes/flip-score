@@ -1,5 +1,10 @@
+import { AppShell } from "@/components/layout/AppShell";
 import { ScoreApp } from "@/components/game/ScoreApp";
 
 export default function Home() {
-  return <ScoreApp />;
+  return (
+    <AppShell>
+      <ScoreApp />
+    </AppShell>
+  );
 }
