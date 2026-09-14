@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1d2060;
+  --color-navy: #2b2f7e;
+  --color-royal: #4c6fa4;
+  --color-teal: #05a2a2;
+  --color-aqua: #7fd4d4;
+  --color-sky: #a8d8ef;
+  --color-gold: #f2c14e;
+  --color-gold-deep: #d99b2b;
+  --color-flame: #e8483c;
+  --color-flame-soft: #f4877d;
+  --color-rose: #e58bb4;
+  --color-cream: #f6efdd;
+  --color-paper: #fffdf6;
+
+  --font-display: var(--font-display-face), "Arial Black", sans-serif;
+  --font-body: var(--font-body-face), system-ui, sans-serif;
+
+  --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-swing: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root {
+  color-scheme: light;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+[role="button"] {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+@utility stage-foil {
+  background-image:
+    radial-gradient(120% 70% at 6% 0%, var(--color-aqua) 0%, transparent 55%),
+    radial-gradient(90% 60% at 94% 8%, var(--color-rose) 0%, transparent 52%),
+    radial-gradient(90% 70% at 50% 100%, var(--color-gold) 0%, transparent 55%),
+    linear-gradient(160deg, var(--color-sky) 0%, var(--color-cream) 55%, var(--color-aqua) 100%);
+}
+
+@utility stage-cream {
+  background-image:
+    radial-gradient(110% 70% at 10% 0%, var(--color-paper) 0%, transparent 60%),
+    linear-gradient(170deg, var(--color-cream) 0%, var(--color-sky) 130%);
+}
+
+@utility foil-band {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-teal) 0%,
+    var(--color-aqua) 22%,
+    var(--color-sky) 40%,
+    var(--color-rose) 62%,
+    var(--color-gold) 84%,
+    var(--color-aqua) 100%
+  );
+  background-size: 220% 100%;
+}
+
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.005em;
+}
+
+@utility deco-card {
+  box-shadow: 0 8px 0 var(--color-ink);
+}
+
+@utility gpu {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+@keyframes foil-slide {
+  from { background-position: 0% 50%; }
+  to { background-position: 200% 50%; }
+}
+
+@keyframes card-pop {
+  0% { transform: scale(0.85) rotate(-3deg); opacity: 0; }
+  60% { transform: scale(1.04) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes rise-in {
+  from { transform: translate3d(0, 22px, 0); opacity: 0; }
+  to { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+
+@keyframes score-bump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+@keyframes crown-drop {
+  0% { transform: translate3d(0, -60px, 0) scale(0.6) rotate(-12deg); opacity: 0; }
+  65% { transform: translate3d(0, 6px, 0) scale(1.08) rotate(3deg); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes halo-pulse {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@utility animate-foil-slide {
+  animation: foil-slide 7s linear infinite;
+  will-change: background-position;
+}
+
+@utility animate-card-pop {
+  animation: card-pop 420ms var(--ease-swing) both;
+  will-change: transform, opacity;
+}
+
+@utility animate-rise-in {
+  animation: rise-in 420ms var(--ease-snap) both;
+  will-change: transform, opacity;
+}
+
+@utility animate-score-bump {
+  animation: score-bump 440ms var(--ease-swing) both;
+  will-change: transform;
+}
+
+@utility animate-crown-drop {
+  animation: crown-drop 720ms var(--ease-swing) both;
+  will-change: transform, opacity;
+}
+
+@utility animate-halo-pulse {
+  animation: halo-pulse 2200ms ease-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
