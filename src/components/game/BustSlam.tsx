@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { Avatar } from "@/components/ui/Avatar";
-import type { Player } from "@/types/game";
+import type { PlayerRow } from "@/types/room";
 
 interface BustSlamProps {
-  player: Player;
+  player: PlayerRow;
   onDone: () => void;
 }
 
@@ -31,7 +31,13 @@ export function BustSlam({ player, onDone }: BustSlamProps) {
     <div className="pointer-events-none fixed inset-0 z-[80] flex items-center justify-center bg-ink/55">
       <div className="animate-shake-hard flex flex-col items-center gap-3">
         <div className="animate-drop-away relative">
-          <Avatar name={player.name} photo={player.photo} size="xl" className="grayscale" />
+          <Avatar
+            name={player.name}
+            photo={player.avatar}
+            emoji={player.emoji}
+            size="xl"
+            className="grayscale"
+          />
           <span className="absolute inset-0 rounded-2xl border-4 border-flame" />
         </div>
 

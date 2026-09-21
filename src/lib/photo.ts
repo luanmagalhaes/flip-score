@@ -37,6 +37,13 @@ export async function shrinkPhoto(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", quality);
 }
 
+export async function shrinkToBlob(file: File): Promise<Blob> {
+  const dataUrl = await shrinkPhoto(file);
+  const answer = await fetch(dataUrl);
+
+  return answer.blob();
+}
+
 export function initialsFor(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
 

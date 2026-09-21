@@ -8,23 +8,19 @@ import { sound } from "@/lib/sound";
 import { Screen } from "@/components/ui/Screen";
 import { Wordmark } from "@/components/ui/Wordmark";
 import { points, rounds as roundLabel } from "@/utils/plural";
-import type { Player } from "@/types/game";
+import type { PlayerRow } from "@/types/room";
 
 interface VictoryScreenProps {
-  winners: Player[];
-  ranked: Player[];
-  totals: Record<string, number>;
+  winners: PlayerRow[];
+  ranked: PlayerRow[];
   playedRounds: number;
-  onRematch: () => void;
   onNewTable: () => void;
 }
 
 export function VictoryScreen({
   winners,
   ranked,
-  totals,
   playedRounds,
-  onRematch,
   onNewTable,
 }: VictoryScreenProps) {
   useEffect(() => {
@@ -40,14 +36,9 @@ export function VictoryScreen({
 
       <Screen
         footer={
-          <div className="flex flex-col gap-2">
-            <Button variant="flame" size="lg" fullWidth onClick={onRematch}>
-              Jogar de novo com a mesma mesa
-            </Button>
-            <Button variant="paper" fullWidth onClick={onNewTable}>
-              Montar outra mesa
-            </Button>
-          </div>
+          <Button variant="flame" size="lg" fullWidth onClick={onNewTable}>
+            Montar outra mesa
+          </Button>
         }
       >
         <div className="flex flex-col items-center gap-4 text-center">
@@ -59,12 +50,13 @@ export function VictoryScreen({
             <div className="animate-champion-zoom relative">
               <Avatar
                 name={champion?.name ?? "Campeã"}
-                photo={champion?.photo ?? null}
+                photo={champion?.avatar ?? null}
+                emoji={champion?.emoji ?? null}
                 size="hero"
                 glow
               />
               <span className="display absolute -right-4 -top-4 rotate-12 rounded-2xl border-4 border-ink bg-gold px-4 py-1.5 text-2xl text-ink shadow-[0_6px_0_var(--color-ink)]">
-                {totals[champion?.id ?? ""] ?? 0}
+                {champion?.total ?? 0}
               </span>
             </div>
           </div>
@@ -77,8 +69,8 @@ export function VictoryScreen({
 
           <p className="max-w-[30ch] text-sm font-semibold text-ink/65">
             {tie
-              ? `Terminaram com ${points(totals[champion?.id ?? ""] ?? 0)} cada em ${roundLabel(playedRounds)}.`
-              : `Chegou com ${points(totals[champion?.id ?? ""] ?? 0)} em ${roundLabel(playedRounds)}.`}
+              ? `Terminaram com ${points(champion?.total ?? 0)} cada em ${roundLabel(playedRounds)}.`
+              : `Chegou com ${points(champion?.total ?? 0)} em ${roundLabel(playedRounds)}.`}
           </p>
         </div>
 
@@ -98,10 +90,11 @@ export function VictoryScreen({
                   <span className="display flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink text-sm text-paper">
                     {index + 1}
                   </span>
-                  <Avatar name={person.name} photo={person.photo} size="md" />
+                  <Avatar name={person.name} photo={person.avatar}
+                emoji={person.emoji} size="md" />
                   <span className="display min-w-0 flex-1 truncate text-ink">{person.name}</span>
                   <span className="display shrink-0 text-xl tabular-nums text-ink">
-                    {totals[person.id] ?? 0}
+                    {person.total}
                   </span>
                 </li>
               );

@@ -7,33 +7,50 @@ import { sound } from "@/lib/sound";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Button } from "@/components/ui/Button";
-import { breakdown, emptyRound } from "@/lib/game/scoring";
+import { breakdown } from "@/lib/game/scoring";
 import { flipSevenCount, modifiers, numberCards, type Modifier } from "@/lib/game/rules";
 import { points } from "@/utils/plural";
-import type { Player, RoundEntry } from "@/types/game";
+import { ExitKind, type PlayerRow } from "@/types/room";
+
+export interface SheetEntry {
+  numbers: number[];
+  modifiers: Modifier[];
+  exitKind: ExitKind;
+}
 
 interface RoundSheetProps {
-  player: Player;
-  position: number;
-  total: number;
+  player: PlayerRow;
+  roundNumber: number;
   running: number;
-  onSave: (entry: RoundEntry) => void;
+  initial?: SheetEntry;
+  busy?: boolean;
+  onSave: (entry: SheetEntry) => void;
   onBack: () => void;
 }
 
+const exits: Array<{ key: ExitKind; label: string; hint: string; skin: string }> = [
+  { key: "STAY", label: "Parou", hint: "Guardou os pontos", skin: "bg-teal text-paper" },
+  { key: "FREEZE", label: "Congelou", hint: "Levou um freeze", skin: "bg-freeze text-ink" },
+  { key: "BUST", label: "Estourou", hint: "Rodada zerada", skin: "bg-flame text-paper" },
+];
+
 export function RoundSheet({
   player,
-  position,
-  total,
+  roundNumber,
   running,
+  initial,
+  busy = false,
   onSave,
   onBack,
 }: RoundSheetProps) {
-  const [entry, setEntry] = useState<RoundEntry>(emptyRound());
+  const [entry, setEntry] = useState<SheetEntry>(
+    initial ?? { numbers: [], modifiers: [], exitKind: "STAY" },
+  );
   const [burst, setBurst] = useState(false);
   const [slam, setSlam] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const detail = breakdown(entry);
+  const busted = entry.exitKind === "BUST";
+  const detail = breakdown({ ...entry, busted });
   const picked = new Set(entry.numbers);
 
   const toggleNumber = (value: number) => {
@@ -50,7 +67,7 @@ export function RoundSheet({
         sound.pick();
       }
 
-      return { ...current, busted: false, numbers };
+      return { ...current, numbers };
     });
   };
 
@@ -72,14 +89,14 @@ export function RoundSheet({
 
       {confirming ? (
         <ConfirmModal
-          title={`Fechar a rodada de ${player.name}?`}
+          title={`Fechar a sua rodada ${roundNumber}?`}
           confirmLabel="Isso mesmo, salvar"
           cancelLabel="Deixa eu conferir"
           body={
             <>
-              {entry.busted ? (
+              {busted ? (
                 <p className="rounded-2xl border-2 border-ink bg-flame px-3 py-2.5 text-center font-semibold text-paper">
-                  Vai entrar como estouro: {player.name} fica com 0 nesta rodada.
+                  Vai entrar como estouro: você fica com 0 nesta rodada.
                 </p>
               ) : (
                 <>
@@ -88,7 +105,7 @@ export function RoundSheet({
                     <strong className="text-ink">
                       {detail.total} {detail.total === 1 ? "ponto" : "pontos"}
                     </strong>{" "}
-                    para {player.name}.
+                    para você.
                   </p>
                   <ul className="mt-2 flex flex-col gap-1 rounded-2xl bg-cream px-3 py-2 text-xs">
                     <li>
@@ -105,8 +122,7 @@ export function RoundSheet({
                 </>
               )}
               <p className="mt-2 text-xs text-ink/60">
-                Depois de salvar a mesa inteira, dá para apagar a rodada toda no placar — mas não
-                só a de uma pessoa.
+                Errou? Dá para corrigir ou apagar esta rodada depois, em Suas rodadas.
               </p>
             </>
           }
@@ -123,13 +139,13 @@ export function RoundSheet({
       <div className="animate-card-pop flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-hidden rounded-[1.75rem] border-4 border-ink bg-paper shadow-[0_14px_0_var(--color-ink)]">
         <div className="shrink-0 border-b-2 border-ink/15 bg-cream px-4 py-3">
           <div className="flex items-center gap-3">
-            <Avatar name={player.name} photo={player.photo} size="md" />
+            <Avatar name={player.name} photo={player.avatar} emoji={player.emoji} size="md" />
             <div className="min-w-0 flex-1">
               <span className="display block truncate text-lg leading-tight text-ink">
                 {player.name}
               </span>
               <span className="block text-xs font-semibold text-ink/55">
-                {position}ª pessoa · {total} no placar
+                Rodada {roundNumber} · {running} no placar
               </span>
             </div>
             <button
@@ -160,7 +176,7 @@ export function RoundSheet({
                     on
                       ? "bg-teal text-paper shadow-[0_3px_0_var(--color-ink)]"
                       : "bg-paper text-ink hover:bg-cream"
-                  } ${entry.busted ? "opacity-40" : ""}`}
+                  } ${busted ? "opacity-40" : ""}`}
                 >
                   {value}
                 </button>
@@ -185,7 +201,7 @@ export function RoundSheet({
                     on
                       ? "bg-gold text-ink shadow-[0_3px_0_var(--color-ink)]"
                       : "bg-paper text-ink hover:bg-cream"
-                  } ${entry.busted ? "opacity-40" : ""}`}
+                  } ${busted ? "opacity-40" : ""}`}
                 >
                   {value}
                 </button>
@@ -193,34 +209,45 @@ export function RoundSheet({
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              setEntry((current) => {
-                const busted = !current.busted;
+          <span className="display mt-4 block text-xs uppercase tracking-[0.16em] text-ink/50">
+            Como você saiu
+          </span>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {exits.map((option) => {
+              const on = entry.exitKind === option.key;
 
-                if (busted) {
-                  sound.bust();
-                  setSlam(true);
-                }
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => {
+                    if (option.key === "BUST" && entry.exitKind !== "BUST") {
+                      sound.bust();
+                      setSlam(true);
+                    } else {
+                      sound.tap();
+                    }
 
-                return { ...current, busted };
-              })
-            }
-            aria-pressed={entry.busted}
-            className={`display mt-4 w-full rounded-2xl border-2 border-ink py-3 text-base transition-all duration-150 ${
-              entry.busted
-                ? "bg-flame text-paper shadow-[0_4px_0_var(--color-ink)]"
-                : "bg-paper text-ink hover:bg-flame-soft"
-            }`}
-          >
-            {entry.busted ? "Estourou · rodada zerada" : "Estourou?"}
-          </button>
+                    setEntry((current) => ({ ...current, exitKind: option.key }));
+                  }}
+                  aria-pressed={on}
+                  className={`display rounded-2xl border-2 border-ink px-2 py-2.5 transition-all duration-150 ${
+                    on ? `${option.skin} shadow-[0_4px_0_var(--color-ink)]` : "bg-paper text-ink"
+                  }`}
+                >
+                  <span className="block text-sm leading-none">{option.label}</span>
+                  <span className="mt-1 block text-[0.6rem] font-semibold opacity-75">
+                    {option.hint}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
           <div className="mt-4 rounded-2xl border-2 border-ink bg-cream p-3">
-            {entry.busted ? (
+            {busted ? (
               <p className="text-center text-sm font-semibold text-flame">
-                Repetiu um número, então essa rodada vale 0.
+                Estourou, então essa rodada vale 0.
               </p>
             ) : (
               <div className="flex flex-col gap-1 text-xs font-semibold text-ink/70">
@@ -261,8 +288,14 @@ export function RoundSheet({
         </div>
 
         <div className="shrink-0 border-t-2 border-ink/15 px-4 pb-4 pt-3">
-          <Button variant="ink" size="lg" fullWidth onClick={() => setConfirming(true)}>
-            Salvar e ir para o próximo
+          <Button
+            variant="ink"
+            size="lg"
+            fullWidth
+            disabled={busy}
+            onClick={() => setConfirming(true)}
+          >
+            {busy ? "Salvando..." : initial ? "Salvar a correção" : "Salvar minha rodada"}
           </Button>
         </div>
       </div>

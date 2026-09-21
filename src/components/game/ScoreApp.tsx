@@ -1,47 +1,47 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { HowToPlay } from "@/components/game/HowToPlay";
-import { MatchScreen } from "@/components/game/MatchScreen";
-import { RoundSheet } from "@/components/game/RoundSheet";
-import { SetupScreen } from "@/components/game/SetupScreen";
+import { HomeScreen } from "@/components/game/HomeScreen";
+import { JoinScreen } from "@/components/game/JoinScreen";
+import { LobbyScreen } from "@/components/game/LobbyScreen";
+import { MyRounds } from "@/components/game/MyRounds";
+import { RoundSheet, type SheetEntry } from "@/components/game/RoundSheet";
+import { TableScreen } from "@/components/game/TableScreen";
 import { VictoryScreen } from "@/components/game/VictoryScreen";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { totalFor } from "@/lib/game/scoring";
-import { applyMuted, unlockSound } from "@/lib/sound";
-import { champions, rank } from "@/lib/game/standings";
+import { useRoom } from "@/hooks/useRoom";
+import { useSession } from "@/hooks/useSession";
+import { api } from "@/lib/api";
+import { applyMuted, sound, unlockSound } from "@/lib/sound";
 import {
-  clearMatch,
-  matchSnapshot,
-  rememberTutorialSeen,
-  saveMatch,
-  serverMatchSnapshot,
   mutedSnapshot,
   rememberMuted,
+  rememberTutorialSeen,
   serverMutedSnapshot,
   serverTutorialSnapshot,
   subscribeMatch,
   tutorialSnapshot,
 } from "@/lib/storage";
-import type { Match, Player, RoundEntry } from "@/types/game";
+import { RoomPhase, type EntryRow } from "@/types/room";
 
-function freshId(): string {
-  return crypto.randomUUID();
-}
+type View = "HOME" | "CREATE" | "JOIN";
 
 export function ScoreApp() {
-  const match = useSyncExternalStore(subscribeMatch, matchSnapshot, serverMatchSnapshot);
+  const { session, seats, save, clear, forget, seatFor } = useSession();
+  const [view, setView] = useState<View>("HOME");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [askedRules, setAskedRules] = useState(false);
+  const [sheetFor, setSheetFor] = useState<EntryRow | "NEW" | null>(null);
+  const [listingMine, setListingMine] = useState(false);
+
   const tutorialSeen = useSyncExternalStore(
     subscribeMatch,
     tutorialSnapshot,
     serverTutorialSnapshot,
   );
-  const [draft, setDraft] = useState<Player[]>([]);
-  const [askedRules, setAskedRules] = useState(false);
-  const [lane, setLane] = useState<Player[] | null>(null);
-  const [collected, setCollected] = useState<Record<string, RoundEntry>>({});
-  const [confirmingQuit, setConfirmingQuit] = useState(false);
   const quiet = useSyncExternalStore(subscribeMatch, mutedSnapshot, serverMutedSnapshot);
+  const { state, refresh } = useRoom(session?.code ?? null, session?.accessToken ?? null);
 
   useEffect(() => {
     applyMuted(quiet);
@@ -55,191 +55,239 @@ export function ScoreApp() {
     return () => window.removeEventListener("pointerdown", prime);
   }, []);
 
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setError(null), 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
+  const run = useCallback(async (work: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+
+    try {
+      await work();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não consegui completar isso.");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const leave = () =>
+    run(async () => {
+      if (session) {
+        await api.leave(session.code, session.accessToken).catch(() => null);
+        forget(session.code);
+      }
+
+      clear();
+      setView("HOME");
+    });
+
   const showRules = askedRules || !tutorialSeen;
   const rulesGate = showRules ? (
     <HowToPlay
       onClose={() => {
-        setAskedRules(false);
         rememberTutorialSeen();
+        setAskedRules(false);
       }}
     />
   ) : null;
 
-  const roster = match?.players ?? draft;
-  const totals: Record<string, number> = {};
+  if (!session) {
+    if (view === "CREATE" || view === "JOIN") {
+      return (
+        <>
+          {rulesGate}
+          <JoinScreen
+            mode={view}
+            busy={busy}
+            error={error}
+            onBack={() => setView("HOME")}
+            onSubmit={(input) =>
+              run(async () => {
+                if (view === "JOIN") {
+                  const known = seatFor(input.code, input.name);
 
-  for (const person of roster) {
-    totals[person.id] = totalFor(match?.rounds[person.id] ?? []);
-  }
+                  if (known) {
+                    save({
+                      code: known.code,
+                      playerId: known.playerId,
+                      accessToken: known.accessToken,
+                      name: known.name,
+                    });
+                    setView("HOME");
 
-  const standings = roster.map((person) => ({ playerId: person.id, total: totals[person.id] ?? 0 }));
-  const winnerIds = champions(standings).map((entry) => entry.playerId);
-  const ranked = rank(standings)
-    .map((entry) => roster.find((person) => person.id === entry.playerId))
-    .filter((person): person is Player => Boolean(person));
+                    return;
+                  }
+                }
 
-  const playedRounds = match ? Math.max(...roster.map((p) => match.rounds[p.id]?.length ?? 0), 0) : 0;
+                const result =
+                  view === "CREATE"
+                    ? await api.createRoom(input.name, input.emoji)
+                    : await api.joinRoom(input.code, input.name, input.emoji);
 
-  if (match && winnerIds.length > 0) {
-    const winners = roster.filter((person) => winnerIds.includes(person.id));
+                save(result);
+                setView("HOME");
+              })
+            }
+          />
+        </>
+      );
+    }
 
     return (
       <>
         {rulesGate}
-        <VictoryScreen
-          winners={winners}
-          ranked={ranked}
-          totals={totals}
-          playedRounds={playedRounds}
-          onRematch={() => {
-            saveMatch({
-              id: freshId(),
-              players: match.players,
-              rounds: Object.fromEntries(match.players.map((person) => [person.id, []])),
-              startedAt: Date.now(),
-              finishedAt: null,
-              winnerIds: [],
-            });
-          }}
-          onNewTable={() => {
-            setDraft([]);
-            clearMatch();
-          }}
-        />
-      </>
-    );
-  }
-
-  if (!match) {
-    return (
-      <>
-        {rulesGate}
-        <SetupScreen
-          roster={draft}
-          onAdd={(name, photo) =>
-            setDraft((current) => [
-              ...current,
-              { id: freshId(), name, photo, createdAt: Date.now() },
-            ])
-          }
-          onRemove={(playerId) =>
-            setDraft((current) => current.filter((person) => person.id !== playerId))
-          }
-          onStart={() =>
-            saveMatch({
-              id: freshId(),
-              players: draft,
-              rounds: Object.fromEntries(draft.map((person) => [person.id, []])),
-              startedAt: Date.now(),
-              finishedAt: null,
-              winnerIds: [],
+        <HomeScreen
+          seats={seats}
+          onResume={(seat) =>
+            save({
+              code: seat.code,
+              playerId: seat.playerId,
+              accessToken: seat.accessToken,
+              name: seat.name,
             })
           }
+          onForget={forget}
+          onCreate={() => setView("CREATE")}
+          onJoin={() => setView("JOIN")}
           onRules={() => setAskedRules(true)}
-          quiet={quiet}
-          onQuiet={(next) => rememberMuted(next)}
         />
       </>
     );
   }
 
-  const saveRound = (entries: Record<string, RoundEntry>) => {
-    const next: Match = {
-      ...match,
-      rounds: Object.fromEntries(
-        match.players.map((person) => [
-          person.id,
-          [...(match.rounds[person.id] ?? []), entries[person.id]],
-        ]),
-      ),
-    };
+  if (!state) {
+    return (
+      <div className="stage-cream flex min-h-dvh items-center justify-center px-8">
+        <p className="display text-lg text-ink/70">Entrando na sala...</p>
+      </div>
+    );
+  }
 
-    saveMatch(next);
-  };
+  const me = state.players.find((person) => person.id === state.meId) ?? null;
+  const myEntries = state.entries.filter((entry) => entry.player_id === state.meId);
 
-  const current = lane?.[0] ?? null;
+  if (state.room.phase === RoomPhase.Finished) {
+    const best = [...state.players].sort((left, right) => right.total - left.total);
+    const top = best[0]?.total ?? 0;
+
+    return (
+      <VictoryScreen
+        winners={best.filter((person) => person.total === top)}
+        ranked={best}
+        playedRounds={state.room.round_number}
+        onNewTable={leave}
+      />
+    );
+  }
+
+  if (state.room.phase === RoomPhase.Lobby) {
+    return (
+      <>
+        {rulesGate}
+        <LobbyScreen
+          room={state.room}
+          players={state.players}
+          meId={state.meId}
+          isHost={state.room.host_player_id === state.meId}
+          busy={busy}
+          error={error}
+          onStart={() => run(() => api.start(session.code, session.accessToken).then(() => refresh()))}
+          onLeave={leave}
+          onEmoji={(emoji) =>
+            run(async () => {
+              await api.setEmoji(session.code, session.accessToken, emoji);
+              await refresh();
+            })
+          }
+          onPhoto={(blob) =>
+            run(async () => {
+              await api.sendAvatar(session.code, session.accessToken, blob);
+              await refresh();
+            })
+          }
+        />
+      </>
+    );
+  }
+
+  const editing = sheetFor === "NEW" ? null : sheetFor;
 
   return (
     <>
       {rulesGate}
 
-      {current ? (
-        <RoundSheet
-          key={current.id}
-          player={current}
-          position={match.players.findIndex((person) => person.id === current.id) + 1}
-          total={totals[current.id] ?? 0}
-          running={totals[current.id] ?? 0}
-          onBack={() => {
-            setLane(null);
-            setCollected({});
+      {listingMine ? (
+        <MyRounds
+          entries={myEntries}
+          busy={busy}
+          onEdit={(entry) => {
+            setListingMine(false);
+            setSheetFor(entry);
           }}
-          onSave={(entry) => {
-            const gathered = { ...collected, [current.id]: entry };
-            const rest = lane?.slice(1) ?? [];
-
-            if (rest.length === 0) {
-              saveRound(gathered);
-              setLane(null);
-              setCollected({});
-
-              return;
-            }
-
-            setCollected(gathered);
-            setLane(rest);
-          }}
+          onDelete={(entry) =>
+            run(async () => {
+              await api.removeEntry(session.code, session.accessToken, entry.id);
+              await refresh();
+            })
+          }
+          onClose={() => setListingMine(false)}
         />
       ) : null}
 
-      <MatchScreen
-        match={match}
-        totals={totals}
-        ranked={ranked}
-        roundNumber={playedRounds + 1}
-        onNewRound={() => {
-          setCollected({});
-          setLane([...match.players]);
-        }}
-        onUndo={() =>
-          saveMatch({
-            ...match,
-            rounds: Object.fromEntries(
-              match.players.map((person) => [
-                person.id,
-                (match.rounds[person.id] ?? []).slice(0, -1),
-              ]),
-            ),
-          })
-        }
-        onRules={() => setAskedRules(true)}
+      {sheetFor && me ? (
+        <RoundSheet
+          player={me}
+          roundNumber={editing?.round_number ?? state.room.round_number}
+          running={me.total}
+          busy={busy}
+          initial={
+            editing
+              ? {
+                  numbers: editing.numbers,
+                  modifiers: editing.modifiers,
+                  exitKind: editing.exit_kind,
+                }
+              : undefined
+          }
+          onBack={() => setSheetFor(null)}
+          onSave={(entry: SheetEntry) =>
+            run(async () => {
+              await api.saveEntry(session.code, session.accessToken, {
+                roundNumber: editing?.round_number ?? state.room.round_number,
+                numbers: entry.numbers,
+                modifiers: entry.modifiers,
+                exitKind: entry.exitKind,
+              });
+              sound.saved();
+              setSheetFor(null);
+              await refresh();
+            })
+          }
+        />
+      ) : null}
+
+      <TableScreen
+        room={state.room}
+        players={state.players}
+        entries={state.entries}
+        meId={state.meId}
+        busy={busy}
+        error={error}
         quiet={quiet}
         onQuiet={(next) => rememberMuted(next)}
-        onQuit={() => setConfirmingQuit(true)}
+        onNewRound={() => setSheetFor("NEW")}
+        onOpenMine={() => setListingMine(true)}
+        onRules={() => setAskedRules(true)}
+        onLeave={leave}
       />
-
-      {confirmingQuit ? (
-        <ConfirmModal
-          title="Encerrar esta partida?"
-          tone="danger"
-          confirmLabel="Encerrar e apagar"
-          cancelLabel="Continuar jogando"
-          body={
-            <>
-              <p>O placar desta mesa some e você volta para a montagem.</p>
-              <p className="mt-2 rounded-xl bg-cream px-3 py-2 text-xs">
-                As fotos também saem deste aparelho.
-              </p>
-            </>
-          }
-          onCancel={() => setConfirmingQuit(false)}
-          onConfirm={() => {
-            setConfirmingQuit(false);
-            setDraft([]);
-            clearMatch();
-          }}
-        />
-      ) : null}
     </>
   );
 }
