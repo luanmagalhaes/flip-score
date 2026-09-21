@@ -21,7 +21,7 @@ export function JoinScreen({ mode, busy, error, onBack, onSubmit }: JoinScreenPr
   const [code, setCode] = useState("");
   const [emoji, setEmoji] = useState(faces[0]);
   const creating = mode === "CREATE";
-  const ready = name.trim().length > 0 && (creating || code.trim().length === 6);
+  const ready = name.trim().length > 0 && (creating || code.trim().length === 2);
 
   return (
     <Screen
@@ -54,7 +54,7 @@ export function JoinScreen({ mode, busy, error, onBack, onSubmit }: JoinScreenPr
         <p className="mt-2 text-sm text-ink/60">
           {creating
             ? "Você recebe um código para mandar pra galera."
-            : "Peça o código de 6 letras pra quem criou."}
+            : "Peça o código de 2 números pra quem criou."}
         </p>
       </header>
 
@@ -66,9 +66,10 @@ export function JoinScreen({ mode, busy, error, onBack, onSubmit }: JoinScreenPr
             </span>
             <input
               value={code}
-              onChange={(event) => setCode(event.target.value.toUpperCase())}
-              placeholder="ABC123"
-              maxLength={6}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 2))}
+              placeholder="00"
+              maxLength={2}
+              inputMode="numeric"
               autoComplete="off"
               className="display w-full rounded-2xl border-2 border-ink bg-paper px-4 py-4 text-2xl tracking-[0.3em] text-ink outline-none placeholder:text-ink/25 focus:ring-4 focus:ring-ink/20"
             />
