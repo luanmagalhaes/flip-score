@@ -22,6 +22,7 @@ export interface RoomRow {
   phase: RoomPhase;
   target_score: number;
   round_number: number;
+  is_test: boolean;
   host_player_id: string | null;
   winner_player_id: string | null;
   created_at: string;

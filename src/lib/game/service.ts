@@ -102,7 +102,12 @@ export async function roomState(input: { code: string; token?: string }): Promis
   return { room, players: people, entries: (entries ?? []) as EntryRow[], meId };
 }
 
-export async function createRoom(input: { hostName: string; avatar?: string; emoji?: string }) {
+export async function createRoom(input: {
+  hostName: string;
+  avatar?: string;
+  emoji?: string;
+  isTest?: boolean;
+}) {
   const client = serverClient();
   const { data: code, error: codeError } = await client.rpc("fs_generate_code");
 
@@ -112,7 +117,7 @@ export async function createRoom(input: { hostName: string; avatar?: string; emo
 
   const { data: room, error: roomError } = await client
     .from("fs_rooms")
-    .insert({ code })
+    .insert({ code, is_test: input.isTest ?? false })
     .select()
     .single();
 
@@ -315,6 +320,10 @@ async function saveMatch(
   people: Array<{ id: string; name: string; total: number }>,
   winnerId: string,
 ) {
+  if (room.is_test) {
+    return;
+  }
+
   await serverClient()
     .from("fs_matches")
     .insert({
