@@ -133,9 +133,13 @@ export function TableScreen({
                   <Avatar name={person.name} photo={person.avatar} emoji={person.emoji} size="md" />
 
                   <span className="min-w-0 flex-1">
-                    <span className="display block truncate text-ink">
-                      {person.name}
-                      {person.id === meId ? " (você)" : ""}
+                    <span className="display flex items-center gap-1.5 truncate text-lg text-ink sm:text-xl">
+                      <span className="truncate">{person.name}</span>
+                      {person.id === meId ? (
+                        <span className="display shrink-0 rounded-full bg-ink px-2 py-0.5 text-[0.55rem] text-paper">
+                          VOCÊ
+                        </span>
+                      ) : null}
                     </span>
                     <span className="mt-1 flex items-center gap-2">
                       <span className="h-2 flex-1 overflow-hidden rounded-full bg-ink/12">

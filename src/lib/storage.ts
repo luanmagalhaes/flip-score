@@ -1,4 +1,4 @@
-const tutorialKey = "flipscore.tutorial";
+const tutorialKey = "flipscore.tutorial.sala";
 const mutedKey = "flipscore.muted";
 const listeners = new Set<() => void>();
 

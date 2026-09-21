@@ -50,18 +50,14 @@ export function HomeScreen({
               </div>
             ) : null}
 
-            <button
-              type="button"
-              onClick={onRules}
-              className="display cursor-pointer rounded-xl px-3 py-1.5 text-sm text-ink/60 transition-colors hover:text-ink"
-            >
-              Como se joga?
-            </button>
             <Button variant="ink" size="lg" fullWidth onClick={onCreate}>
               Criar sala
             </Button>
             <Button variant="paper" size="lg" fullWidth onClick={onJoin}>
               Entrar em uma sala
+            </Button>
+            <Button variant="gold" fullWidth onClick={onRules}>
+              Como se joga?
             </Button>
           </div>
 
