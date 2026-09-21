@@ -12,6 +12,7 @@ interface HomeScreenProps {
   onCreate: () => void;
   onJoin: () => void;
   onRules: () => void;
+  onHistory: () => void;
 }
 
 export function HomeScreen({
@@ -21,6 +22,7 @@ export function HomeScreen({
   onCreate,
   onJoin,
   onRules,
+  onHistory,
 }: HomeScreenProps) {
   const lastSeat = seats[0];
 
@@ -58,6 +60,9 @@ export function HomeScreen({
             </Button>
             <Button variant="gold" fullWidth onClick={onRules}>
               Como se joga?
+            </Button>
+            <Button variant="teal" fullWidth onClick={onHistory}>
+              Histórico
             </Button>
           </div>
 

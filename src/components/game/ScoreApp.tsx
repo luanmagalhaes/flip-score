@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { HowToPlay } from "@/components/game/HowToPlay";
 import { HomeScreen } from "@/components/game/HomeScreen";
 import { JoinScreen } from "@/components/game/JoinScreen";
+import { HistoryScreen } from "@/components/history/HistoryScreen";
 import { LobbyScreen } from "@/components/game/LobbyScreen";
 import { MyRounds } from "@/components/game/MyRounds";
 import { RoundSheet, type SheetEntry } from "@/components/game/RoundSheet";
@@ -24,7 +25,7 @@ import {
 } from "@/lib/storage";
 import { RoomPhase, type EntryRow } from "@/types/room";
 
-type View = "HOME" | "CREATE" | "JOIN";
+type View = "HOME" | "CREATE" | "JOIN" | "HISTORY";
 
 export function ScoreApp() {
   const { session, seats, save, clear, forget, seatFor } = useSession();
@@ -100,6 +101,10 @@ export function ScoreApp() {
   ) : null;
 
   if (!session) {
+    if (view === "HISTORY") {
+      return <HistoryScreen onBack={() => setView("HOME")} />;
+    }
+
     if (view === "CREATE" || view === "JOIN") {
       return (
         <>
@@ -158,6 +163,7 @@ export function ScoreApp() {
           onCreate={() => setView("CREATE")}
           onJoin={() => setView("JOIN")}
           onRules={() => setAskedRules(true)}
+          onHistory={() => setView("HISTORY")}
         />
       </>
     );

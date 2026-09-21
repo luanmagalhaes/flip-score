@@ -310,6 +310,24 @@ async function refreshTotals(roomId: string) {
   return people.map((person) => ({ ...person, total: tally.get(person.id) ?? 0 }));
 }
 
+async function saveMatch(
+  room: RoomRow,
+  people: Array<{ id: string; name: string; total: number }>,
+  winnerId: string,
+) {
+  await serverClient()
+    .from("fs_matches")
+    .insert({
+      room_code: room.code,
+      winner_name: people.find((person) => person.id === winnerId)?.name ?? null,
+      rounds: room.round_number,
+      players: people.map((person) => ({
+        name: person.name,
+        score: person.total,
+      })),
+    });
+}
+
 async function settleRound(room: RoomRow) {
   const client = serverClient();
   const people = await refreshTotals(room.id);
@@ -336,6 +354,8 @@ async function settleRound(room: RoomRow) {
         finished_at: new Date().toISOString(),
       })
       .eq("id", room.id);
+
+    await saveMatch(room, people, front[0].playerId);
 
     return;
   }
