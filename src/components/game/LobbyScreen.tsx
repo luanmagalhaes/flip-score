@@ -147,7 +147,7 @@ export function LobbyScreen({
             <span className="display block text-xs uppercase tracking-[0.2em] opacity-65">
               Código da sala
             </span>
-            <span className="display mt-1 block text-5xl tracking-[0.2em] sm:text-6xl">
+            <span className="display mt-2 block pb-1 text-5xl leading-tight tracking-[0.2em] sm:text-6xl">
               {room.code}
             </span>
             <span className="mt-2 block text-xs font-semibold opacity-70">
