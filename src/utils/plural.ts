@@ -21,3 +21,17 @@ export function rounds(count: number): string {
 export function cards(count: number): string {
   return countLabel(count, "carta", "cartas");
 }
+
+export function joinNames(names: readonly string[], limit = 3): string {
+  if (names.length <= 1) {
+    return names[0] ?? "";
+  }
+
+  if (names.length > limit) {
+    const shown = names.slice(0, limit - 1);
+
+    return `${shown.join(", ")} e mais ${names.length - shown.length}`;
+  }
+
+  return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}

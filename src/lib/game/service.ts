@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ServiceError } from "@/lib/errors";
 import { maxNameLength, maxPlayers, minPlayers } from "@/lib/game/limits";
 import { modifiers as allowedModifiers, highestCard, lowestCard } from "@/lib/game/rules";
+import { missingLaunch, totalsByPlayer, withTotals } from "@/lib/game/round";
 import { roundScore } from "@/lib/game/scoring";
 import { champions } from "@/lib/game/standings";
 import { serverClient } from "@/lib/supabase";
@@ -99,7 +100,9 @@ export async function roomState(input: { code: string; token?: string }): Promis
     meId = (secret?.player_id as string) ?? null;
   }
 
-  return { room, players: people, entries: (entries ?? []) as EntryRow[], meId };
+  const rows = (entries ?? []) as EntryRow[];
+
+  return { room, players: withTotals(people, rows), entries: rows, meId };
 }
 
 export async function createRoom(input: {
@@ -169,7 +172,7 @@ export async function joinRoom(input: {
       name,
       avatar: input.avatar ?? null,
       emoji: input.emoji ?? null,
-      seat: people.length + 1,
+      seat: Math.max(0, ...people.map((person) => person.seat)) + 1,
     })
     .select()
     .single();
@@ -295,12 +298,7 @@ async function refreshTotals(roomId: string) {
     .select("player_id, total")
     .eq("room_id", roomId);
 
-  const tally = new Map<string, number>();
-
-  for (const entry of (entries ?? []) as Array<{ player_id: string; total: number }>) {
-    tally.set(entry.player_id, (tally.get(entry.player_id) ?? 0) + entry.total);
-  }
-
+  const tally = totalsByPlayer((entries ?? []) as Array<{ player_id: string; total: number }>);
   const people = await roster(roomId);
 
   await Promise.all(
@@ -342,29 +340,33 @@ async function settleRound(room: RoomRow) {
   const people = await refreshTotals(room.id);
   const { data: entries } = await client
     .from("fs_entries")
-    .select("player_id")
+    .select("player_id, round_number")
     .eq("room_id", room.id)
     .eq("round_number", room.round_number);
 
-  const done = new Set(((entries ?? []) as Array<{ player_id: string }>).map((row) => row.player_id));
+  const launched = (entries ?? []) as Array<{ player_id: string; round_number: number }>;
 
-  if (people.some((person) => !done.has(person.id))) {
+  if (missingLaunch(people, launched, room.round_number).length > 0) {
     return;
   }
 
   const front = champions(people.map((person) => ({ playerId: person.id, total: person.total })));
 
   if (front.length > 0) {
-    await client
+    const { data: closed } = await client
       .from("fs_rooms")
       .update({
         phase: RoomPhase.Finished,
         winner_player_id: front[0].playerId,
         finished_at: new Date().toISOString(),
       })
-      .eq("id", room.id);
+      .eq("id", room.id)
+      .eq("phase", RoomPhase.Playing)
+      .select("id");
 
-    await saveMatch(room, people, front[0].playerId);
+    if ((closed ?? []).length > 0) {
+      await saveMatch(room, people, front[0].playerId);
+    }
 
     return;
   }
@@ -380,6 +382,7 @@ export async function saveEntry(input: {
   code: string;
   token: string;
   roundNumber?: number;
+  replacing?: boolean;
   numbers: unknown;
   modifiers: unknown;
   exitKind: unknown;
@@ -404,6 +407,21 @@ export async function saveEntry(input: {
   const list = checkedModifiers(input.modifiers);
   const exitKind = checkedExit(input.exitKind);
   const total = roundScore({ numbers, modifiers: list, busted: exitKind === ExitKind.Bust });
+
+  const { data: existing } = await serverClient()
+    .from("fs_entries")
+    .select("id")
+    .eq("room_id", room.id)
+    .eq("player_id", me.id)
+    .eq("round_number", roundNumber)
+    .maybeSingle();
+
+  if (existing && !input.replacing) {
+    throw new ServiceError(
+      `Você já lançou a rodada ${roundNumber}. Para trocar, use Corrigir.`,
+      409,
+    );
+  }
 
   const { error } = await serverClient()
     .from("fs_entries")
@@ -452,6 +470,44 @@ export async function removeEntry(input: { code: string; token: string; entryId:
 
   await client.from("fs_entries").delete().eq("id", entry.id);
   await refreshTotals(room.id);
+
+  return roomState({ code: input.code, token: input.token });
+}
+
+export async function removePlayer(input: { code: string; token: string; playerId: string }) {
+  const room = await loadRoom(input.code);
+  const me = await loadPlayer(room, input.token);
+  const client = serverClient();
+
+  if (room.host_player_id !== me.id) {
+    throw new ServiceError("Só quem abriu a sala tira alguém da mesa", 403);
+  }
+
+  if (input.playerId === me.id) {
+    throw new ServiceError("Para sair, use o botão Sair", 422);
+  }
+
+  if (room.phase === RoomPhase.Finished) {
+    throw new ServiceError("A partida já acabou", 409);
+  }
+
+  const { data: target } = await client
+    .from("fs_players")
+    .select("id")
+    .eq("id", input.playerId)
+    .eq("room_id", room.id)
+    .maybeSingle();
+
+  if (!target) {
+    throw new ServiceError("Essa pessoa não está mais na mesa", 404);
+  }
+
+  await client.from("fs_players").delete().eq("id", target.id as string);
+  await refreshTotals(room.id);
+
+  if (room.phase === RoomPhase.Playing) {
+    await settleRound(room);
+  }
 
   return roomState({ code: input.code, token: input.token });
 }

@@ -6,6 +6,7 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
     const { code } = await context.params;
     const body = (await request.json()) as {
       roundNumber?: number;
+      replacing?: boolean;
       numbers?: unknown;
       modifiers?: unknown;
       exitKind?: unknown;
@@ -15,6 +16,7 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
       code,
       token: playerToken(request),
       roundNumber: body.roundNumber,
+      replacing: body.replacing === true,
       numbers: body.numbers ?? [],
       modifiers: body.modifiers ?? [],
       exitKind: body.exitKind,

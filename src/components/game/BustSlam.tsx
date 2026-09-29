@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import type { PlayerRow } from "@/types/room";
 
@@ -19,11 +19,13 @@ const jeers = [
 ];
 
 export function BustSlam({ player, onDone }: BustSlamProps) {
+  const finish = useEffectEvent(onDone);
+
   useEffect(() => {
-    const timer = window.setTimeout(onDone, 1800);
+    const timer = window.setTimeout(() => finish(), 1800);
 
     return () => window.clearTimeout(timer);
-  }, [onDone]);
+  }, []);
 
   const jeer = jeers[player.name.length % jeers.length];
 

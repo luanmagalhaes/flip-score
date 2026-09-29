@@ -23,6 +23,7 @@ interface LobbyScreenProps {
   onLeave: () => void;
   onEmoji: (emoji: string) => void;
   onPhoto: (blob: Blob) => void;
+  onRemovePlayer: (playerId: string) => void;
 }
 
 export function LobbyScreen({
@@ -36,9 +37,12 @@ export function LobbyScreen({
   onLeave,
   onEmoji,
   onPhoto,
+  onRemovePlayer,
 }: LobbyScreenProps) {
   const [copied, setCopied] = useState(false);
   const [confirmingStart, setConfirmingStart] = useState(false);
+  const [confirmingRemoval, setConfirmingRemoval] = useState<string | null>(null);
+  const pendingRemoval = players.find((person) => person.id === confirmingRemoval) ?? null;
   const [photoTrouble, setPhotoTrouble] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const enough = players.length >= minPlayers;
@@ -122,6 +126,27 @@ export function LobbyScreen({
           onConfirm={() => {
             setConfirmingStart(false);
             onStart();
+          }}
+        />
+      ) : null}
+
+      {pendingRemoval ? (
+        <ConfirmModal
+          title={`Tirar ${pendingRemoval.name} da sala?`}
+          tone="danger"
+          busy={busy}
+          confirmLabel="Tirar da sala"
+          cancelLabel="Deixa quieto"
+          body={
+            <p>
+              <strong className="text-ink">{pendingRemoval.name}</strong> sai da sala agora. Se
+              entrou por engano, dá para voltar com o código {room.code} antes de a partida começar.
+            </p>
+          }
+          onCancel={() => setConfirmingRemoval(null)}
+          onConfirm={() => {
+            onRemovePlayer(pendingRemoval.id);
+            setConfirmingRemoval(null);
           }}
         />
       ) : null}
@@ -230,6 +255,17 @@ export function LobbyScreen({
                   <span className="display rounded-full bg-navy px-2.5 py-1 text-[0.6rem] text-paper">
                     Dono
                   </span>
+                ) : null}
+                {isHost && person.id !== meId ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingRemoval(person.id)}
+                    disabled={busy}
+                    aria-label={`Tirar ${person.name} da sala`}
+                    className="display shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs text-ink/40 transition-colors hover:bg-flame hover:text-paper disabled:cursor-not-allowed"
+                  >
+                    Tirar
+                  </button>
                 ) : null}
               </li>
             ))}

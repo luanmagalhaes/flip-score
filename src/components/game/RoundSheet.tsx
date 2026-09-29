@@ -24,6 +24,7 @@ interface RoundSheetProps {
   running: number;
   initial?: SheetEntry;
   busy?: boolean;
+  error?: string | null;
   onSave: (entry: SheetEntry) => void;
   onBack: () => void;
 }
@@ -40,6 +41,7 @@ export function RoundSheet({
   running,
   initial,
   busy = false,
+  error = null,
   onSave,
   onBack,
 }: RoundSheetProps) {
@@ -51,6 +53,9 @@ export function RoundSheet({
   const [confirming, setConfirming] = useState(false);
   const busted = entry.exitKind === "BUST";
   const detail = breakdown({ ...entry, busted });
+  const previous = initial
+    ? breakdown({ ...initial, busted: initial.exitKind === "BUST" }).total
+    : null;
   const picked = new Set(entry.numbers);
 
   const toggleNumber = (value: number) => {
@@ -89,7 +94,11 @@ export function RoundSheet({
 
       {confirming ? (
         <ConfirmModal
-          title={`Fechar a sua rodada ${roundNumber}?`}
+          title={
+            previous === null
+              ? `Fechar a sua rodada ${roundNumber}?`
+              : `Trocar a sua rodada ${roundNumber}?`
+          }
           confirmLabel="Isso mesmo, salvar"
           cancelLabel="Deixa eu conferir"
           body={
@@ -121,6 +130,11 @@ export function RoundSheet({
                   </ul>
                 </>
               )}
+              {previous !== null ? (
+                <p className="mt-2 rounded-2xl border-2 border-ink bg-gold/40 px-3 py-2 text-xs font-semibold text-ink">
+                  Isso entra no lugar de {points(previous)} que estavam na rodada {roundNumber}.
+                </p>
+              ) : null}
               <p className="mt-2 text-xs text-ink/60">
                 Errou? Dá para corrigir ou apagar esta rodada depois, em Suas rodadas.
               </p>
@@ -129,7 +143,6 @@ export function RoundSheet({
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             setConfirming(false);
-            sound.saved();
             onSave(entry);
           }}
         />
@@ -288,6 +301,14 @@ export function RoundSheet({
         </div>
 
         <div className="shrink-0 border-t-2 border-ink/15 px-4 pb-4 pt-3">
+          {error ? (
+            <p
+              role="alert"
+              className="mb-2 rounded-2xl border-2 border-ink bg-flame-soft px-3 py-2 text-sm font-semibold text-ink"
+            >
+              Não salvou: {error}
+            </p>
+          ) : null}
           <Button
             variant="ink"
             size="lg"

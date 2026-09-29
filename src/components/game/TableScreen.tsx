@@ -1,10 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { WaitingModal } from "@/components/game/WaitingModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Screen } from "@/components/ui/Screen";
 import { Wordmark } from "@/components/ui/Wordmark";
+import { missingLaunch } from "@/lib/game/round";
 import { targetScore } from "@/lib/game/rules";
+import { joinNames, points, rounds } from "@/utils/plural";
 import { ExitKind, type EntryRow, type PlayerRow, type RoomRow } from "@/types/room";
 
 interface TableScreenProps {
@@ -12,12 +17,15 @@ interface TableScreenProps {
   players: PlayerRow[];
   entries: EntryRow[];
   meId: string | null;
+  isHost: boolean;
   busy: boolean;
   error: string | null;
   quiet: boolean;
   onQuiet: (next: boolean) => void;
   onNewRound: () => void;
+  onFixRound: (entry: EntryRow) => void;
   onOpenMine: () => void;
+  onRemovePlayer: (playerId: string) => void;
   onRules: () => void;
   onLeave: () => void;
 }
@@ -39,46 +47,149 @@ export function TableScreen({
   players,
   entries,
   meId,
+  isHost,
   busy,
   error,
   quiet,
   onQuiet,
   onNewRound,
+  onFixRound,
   onOpenMine,
+  onRemovePlayer,
   onRules,
   onLeave,
 }: TableScreenProps) {
+  const [askingFixFor, setAskingFixFor] = useState<number | null>(null);
+  const [confirmingRemoval, setConfirmingRemoval] = useState<string | null>(null);
   const ranked = [...players].sort((left, right) => right.total - left.total);
   const thisRound = entries.filter((entry) => entry.round_number === room.round_number);
-  const done = new Set(thisRound.map((entry) => entry.player_id));
   const mineThisRound = thisRound.find((entry) => entry.player_id === meId) ?? null;
-  const waiting = players.filter((person) => !done.has(person.id));
+  const waiting = missingLaunch(players, entries, room.round_number);
+  const othersWaiting = waiting.filter((person) => person.id !== meId);
+  const someoneLaunched = thisRound.length > 0;
   const myEntries = entries.filter((entry) => entry.player_id === meId);
+  const pendingRemoval = players.find((person) => person.id === confirmingRemoval) ?? null;
+  const removalLaunches = pendingRemoval
+    ? entries.filter((entry) => entry.player_id === pendingRemoval.id).length
+    : 0;
+  const removalUnblocks =
+    pendingRemoval !== null &&
+    waiting.length === 1 &&
+    waiting[0].id === pendingRemoval.id;
+  const showWaiting =
+    askingFixFor === room.round_number && mineThisRound !== null && othersWaiting.length > 0;
+
+  const askToFix = () => {
+    if (!mineThisRound) {
+      return;
+    }
+
+    if (othersWaiting.length > 0) {
+      setAskingFixFor(room.round_number);
+
+      return;
+    }
+
+    onFixRound(mineThisRound);
+  };
+
+  const footer = !mineThisRound ? (
+    <div className="flex flex-col gap-2">
+      <Button variant="ink" size="lg" fullWidth disabled={busy} onClick={onNewRound}>
+        Lançar minha rodada {room.round_number}
+      </Button>
+      <p className="text-center text-xs font-semibold text-ink/55">
+        {othersWaiting.length === 0
+          ? "Só falta você lançar"
+          : `Falta lançar: você e ${joinNames(othersWaiting.map((person) => person.name))}`}
+      </p>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3 rounded-2xl border-2 border-ink bg-cream px-3 py-2.5">
+        {othersWaiting.length > 0 ? (
+          <span className="flex shrink-0 -space-x-3">
+            {othersWaiting.slice(0, 3).map((person) => (
+              <Avatar
+                key={person.id}
+                name={person.name}
+                photo={person.avatar}
+                emoji={person.emoji}
+                size="sm"
+                className="ring-2 ring-cream"
+              />
+            ))}
+          </span>
+        ) : null}
+        <span className="min-w-0 flex-1">
+          <span className="display block text-sm text-ink">
+            {othersWaiting.length > 0
+              ? `Esperando ${joinNames(othersWaiting.map((person) => person.name))}`
+              : "Todo mundo lançou"}
+          </span>
+          <span className="block text-xs font-semibold text-ink/55">
+            {othersWaiting.length > 0
+              ? `Sua rodada ${room.round_number} está salva. A ${room.round_number + 1} abre quando todo mundo lançar.`
+              : "A rodada vira em instantes."}
+          </span>
+        </span>
+      </div>
+      <Button variant="paper" fullWidth disabled={busy} onClick={askToFix}>
+        Corrigir minha rodada {room.round_number}
+      </Button>
+    </div>
+  );
 
   return (
-    <Screen
-      wide
-      footer={
-        <div className="flex flex-col gap-2">
-          <Button variant="ink" size="lg" fullWidth disabled={busy} onClick={onNewRound}>
-            {mineThisRound
-              ? `Refazer a rodada ${room.round_number}`
-              : `Lançar minha rodada ${room.round_number}`}
-          </Button>
-          {waiting.length > 0 ? (
-            <p className="text-center text-xs font-semibold text-ink/55">
-              {waiting.length === 1
-                ? `Falta ${waiting[0].name} lançar`
-                : `Faltam ${waiting.length} pessoas lançarem`}
-            </p>
-          ) : (
-            <p className="text-center text-xs font-semibold text-ink/55">
-              Todo mundo lançou. A rodada vira em instantes.
-            </p>
-          )}
-        </div>
-      }
-    >
+    <Screen wide footer={footer}>
+      {showWaiting && mineThisRound ? (
+        <WaitingModal
+          roundNumber={room.round_number}
+          mine={mineThisRound}
+          missing={othersWaiting}
+          onWait={() => setAskingFixFor(null)}
+          onFix={() => {
+            setAskingFixFor(null);
+            onFixRound(mineThisRound);
+          }}
+        />
+      ) : null}
+
+      {pendingRemoval ? (
+        <ConfirmModal
+          title={`Tirar ${pendingRemoval.name} da mesa?`}
+          tone="danger"
+          busy={busy}
+          confirmLabel="Tirar da mesa"
+          cancelLabel="Deixa quieto"
+          body={
+            <>
+              <p>
+                <strong className="text-ink">{pendingRemoval.name}</strong> sai da partida na hora e
+                não consegue voltar para esta sala.
+              </p>
+              <ul className="mt-3 flex flex-col gap-1.5 text-xs">
+                <li className="rounded-xl bg-sky/50 px-3 py-2">
+                  {removalLaunches === 0
+                    ? "Ainda não tinha lançado nenhuma rodada"
+                    : `${rounds(removalLaunches)} e ${points(pendingRemoval.total)} saem do placar`}
+                </li>
+                {removalUnblocks ? (
+                  <li className="rounded-xl bg-gold/40 px-3 py-2 font-semibold text-ink">
+                    Só faltava essa pessoa, então a rodada {room.round_number} fecha na hora
+                  </li>
+                ) : null}
+              </ul>
+            </>
+          }
+          onCancel={() => setConfirmingRemoval(null)}
+          onConfirm={() => {
+            onRemovePlayer(pendingRemoval.id);
+            setConfirmingRemoval(null);
+          }}
+        />
+      ) : null}
+
       <header className="mb-5 flex items-center justify-between gap-3">
         <button
           type="button"
@@ -152,12 +263,33 @@ export function TableScreen({
                     </span>
                   </span>
 
-                  <span
-                    className={`display shrink-0 rounded-full px-2 py-1 text-[0.6rem] ${
-                      entry ? exitSkins[entry.exit_kind] : "bg-ink/10 text-ink/55"
-                    }`}
-                  >
-                    {entry ? `${exitLabels[entry.exit_kind]} ${entry.total}` : "Jogando"}
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span
+                      className={`display rounded-full px-2 py-1 text-[0.6rem] ${
+                        entry
+                          ? exitSkins[entry.exit_kind]
+                          : someoneLaunched
+                            ? "bg-flame-soft text-ink"
+                            : "bg-ink/10 text-ink/55"
+                      }`}
+                    >
+                      {entry
+                        ? `${exitLabels[entry.exit_kind]} ${entry.total}`
+                        : someoneLaunched
+                          ? "Falta lançar"
+                          : "Jogando"}
+                    </span>
+                    {isHost && person.id !== meId ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingRemoval(person.id)}
+                        disabled={busy}
+                        aria-label={`Tirar ${person.name} da mesa`}
+                        className="display cursor-pointer rounded-lg px-2 py-0.5 text-[0.65rem] text-ink/40 transition-colors hover:bg-flame hover:text-paper disabled:cursor-not-allowed"
+                      >
+                        Tirar
+                      </button>
+                    ) : null}
                   </span>
                 </li>
               );

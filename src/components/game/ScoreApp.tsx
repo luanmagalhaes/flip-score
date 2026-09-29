@@ -7,6 +7,7 @@ import { JoinScreen } from "@/components/game/JoinScreen";
 import { HistoryScreen } from "@/components/history/HistoryScreen";
 import { LobbyScreen } from "@/components/game/LobbyScreen";
 import { MyRounds } from "@/components/game/MyRounds";
+import { RemovedScreen } from "@/components/game/RemovedScreen";
 import { RoundSheet, type SheetEntry } from "@/components/game/RoundSheet";
 import { TableScreen } from "@/components/game/TableScreen";
 import { VictoryScreen } from "@/components/game/VictoryScreen";
@@ -27,13 +28,18 @@ import { RoomPhase, type EntryRow } from "@/types/room";
 
 type View = "HOME" | "CREATE" | "JOIN" | "HISTORY";
 
+interface OpenSheet {
+  roundNumber: number;
+  entry: EntryRow | null;
+}
+
 export function ScoreApp() {
   const { session, seats, save, clear, forget, seatFor } = useSession();
   const [view, setView] = useState<View>("HOME");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [askedRules, setAskedRules] = useState(false);
-  const [sheetFor, setSheetFor] = useState<EntryRow | "NEW" | null>(null);
+  const [sheet, setSheet] = useState<OpenSheet | null>(null);
   const [listingMine, setListingMine] = useState(false);
 
   const tutorialSeen = useSyncExternalStore(
@@ -169,7 +175,7 @@ export function ScoreApp() {
     );
   }
 
-  if (!state) {
+  if (!state || state.room.code.toUpperCase() !== session.code.toUpperCase()) {
     return (
       <div className="stage-cream flex min-h-dvh items-center justify-center px-8">
         <p className="display text-lg text-ink/70">Entrando na sala...</p>
@@ -179,6 +185,25 @@ export function ScoreApp() {
 
   const me = state.players.find((person) => person.id === state.meId) ?? null;
   const myEntries = state.entries.filter((entry) => entry.player_id === state.meId);
+  const isHost = state.room.host_player_id !== null && state.room.host_player_id === state.meId;
+  const removePlayer = (playerId: string) =>
+    run(async () => {
+      await api.removePlayer(session.code, session.accessToken, playerId);
+      await refresh();
+    });
+
+  if (!me && state.room.phase !== RoomPhase.Finished) {
+    return (
+      <RemovedScreen
+        room={state.room}
+        onHome={() => {
+          forget(session.code);
+          clear();
+          setView("HOME");
+        }}
+      />
+    );
+  }
 
   if (state.room.phase === RoomPhase.Finished) {
     const best = [...state.players].sort((left, right) => right.total - left.total);
@@ -202,11 +227,12 @@ export function ScoreApp() {
           room={state.room}
           players={state.players}
           meId={state.meId}
-          isHost={state.room.host_player_id === state.meId}
+          isHost={isHost}
           busy={busy}
           error={error}
           onStart={() => run(() => api.start(session.code, session.accessToken).then(() => refresh()))}
           onLeave={leave}
+          onRemovePlayer={removePlayer}
           onEmoji={(emoji) =>
             run(async () => {
               await api.setEmoji(session.code, session.accessToken, emoji);
@@ -224,7 +250,7 @@ export function ScoreApp() {
     );
   }
 
-  const editing = sheetFor === "NEW" ? null : sheetFor;
+  const editing = sheet?.entry ?? null;
 
   return (
     <>
@@ -234,9 +260,10 @@ export function ScoreApp() {
         <MyRounds
           entries={myEntries}
           busy={busy}
+          error={error}
           onEdit={(entry) => {
             setListingMine(false);
-            setSheetFor(entry);
+            setSheet({ roundNumber: entry.round_number, entry });
           }}
           onDelete={(entry) =>
             run(async () => {
@@ -248,12 +275,14 @@ export function ScoreApp() {
         />
       ) : null}
 
-      {sheetFor && me ? (
+      {sheet && me ? (
         <RoundSheet
+          key={`${sheet.roundNumber}-${editing?.id ?? "new"}`}
           player={me}
-          roundNumber={editing?.round_number ?? state.room.round_number}
-          running={me.total}
+          roundNumber={sheet.roundNumber}
+          running={me.total - (editing?.total ?? 0)}
           busy={busy}
+          error={error}
           initial={
             editing
               ? {
@@ -263,17 +292,18 @@ export function ScoreApp() {
                 }
               : undefined
           }
-          onBack={() => setSheetFor(null)}
+          onBack={() => setSheet(null)}
           onSave={(entry: SheetEntry) =>
             run(async () => {
               await api.saveEntry(session.code, session.accessToken, {
-                roundNumber: editing?.round_number ?? state.room.round_number,
+                roundNumber: sheet.roundNumber,
+                replacing: editing !== null,
                 numbers: entry.numbers,
                 modifiers: entry.modifiers,
                 exitKind: entry.exitKind,
               });
               sound.saved();
-              setSheetFor(null);
+              setSheet(null);
               await refresh();
             })
           }
@@ -285,11 +315,14 @@ export function ScoreApp() {
         players={state.players}
         entries={state.entries}
         meId={state.meId}
+        isHost={isHost}
         busy={busy}
         error={error}
         quiet={quiet}
         onQuiet={(next) => rememberMuted(next)}
-        onNewRound={() => setSheetFor("NEW")}
+        onNewRound={() => setSheet({ roundNumber: state.room.round_number, entry: null })}
+        onFixRound={(entry) => setSheet({ roundNumber: entry.round_number, entry })}
+        onRemovePlayer={removePlayer}
         onOpenMine={() => setListingMine(true)}
         onRules={() => setAskedRules(true)}
         onLeave={leave}

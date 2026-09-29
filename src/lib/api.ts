@@ -90,6 +90,7 @@ export const api = {
     token: string,
     entry: {
       roundNumber?: number;
+      replacing?: boolean;
       numbers: number[];
       modifiers: Modifier[];
       exitKind: ExitKind;
@@ -112,6 +113,13 @@ export const api = {
     request<RoomState>(
       `/api/rooms/${code}/profile`,
       { method: "POST", body: JSON.stringify({ emoji, avatar: null }) },
+      token,
+    ),
+
+  removePlayer: (code: string, token: string, playerId: string) =>
+    request<RoomState>(
+      `/api/rooms/${code}/remove`,
+      { method: "POST", body: JSON.stringify({ playerId }) },
       token,
     ),
 

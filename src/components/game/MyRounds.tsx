@@ -8,6 +8,7 @@ import { ExitKind, type EntryRow } from "@/types/room";
 interface MyRoundsProps {
   entries: EntryRow[];
   busy: boolean;
+  error: string | null;
   onEdit: (entry: EntryRow) => void;
   onDelete: (entry: EntryRow) => void;
   onClose: () => void;
@@ -25,7 +26,7 @@ const exitSkins: Record<ExitKind, string> = {
   BUST: "bg-flame text-paper",
 };
 
-export function MyRounds({ entries, busy, onEdit, onDelete, onClose }: MyRoundsProps) {
+export function MyRounds({ entries, busy, error, onEdit, onDelete, onClose }: MyRoundsProps) {
   const [erasing, setErasing] = useState<EntryRow | null>(null);
 
   return (
@@ -72,6 +73,14 @@ export function MyRounds({ entries, busy, onEdit, onDelete, onClose }: MyRoundsP
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+            {error ? (
+              <p
+                role="alert"
+                className="mb-3 rounded-2xl border-2 border-ink bg-flame-soft px-3 py-2 text-sm font-semibold text-ink"
+              >
+                {error}
+              </p>
+            ) : null}
             {entries.length === 0 ? (
               <p className="py-8 text-center text-sm font-semibold text-ink/50">
                 Você ainda não lançou nenhuma rodada.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { flipSevenBonus } from "@/lib/game/rules";
 
 interface FlipSevenBurstProps {
@@ -8,11 +8,13 @@ interface FlipSevenBurstProps {
 }
 
 export function FlipSevenBurst({ onDone }: FlipSevenBurstProps) {
+  const finish = useEffectEvent(onDone);
+
   useEffect(() => {
-    const timer = window.setTimeout(onDone, 1750);
+    const timer = window.setTimeout(() => finish(), 1750);
 
     return () => window.clearTimeout(timer);
-  }, [onDone]);
+  }, []);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[80] flex items-center justify-center">
