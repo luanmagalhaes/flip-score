@@ -7,7 +7,7 @@ import { JoinScreen } from "@/components/game/JoinScreen";
 import { HistoryScreen } from "@/components/history/HistoryScreen";
 import { LobbyScreen } from "@/components/game/LobbyScreen";
 import { MyRounds } from "@/components/game/MyRounds";
-import { RemovedScreen } from "@/components/game/RemovedScreen";
+import { OutOfRoomScreen } from "@/components/game/OutOfRoomScreen";
 import { RoundSheet, type SheetEntry } from "@/components/game/RoundSheet";
 import { TableScreen } from "@/components/game/TableScreen";
 import { VictoryScreen } from "@/components/game/VictoryScreen";
@@ -48,7 +48,10 @@ export function ScoreApp() {
     serverTutorialSnapshot,
   );
   const quiet = useSyncExternalStore(subscribeMatch, mutedSnapshot, serverMutedSnapshot);
-  const { state, refresh } = useRoom(session?.code ?? null, session?.accessToken ?? null);
+  const { state, gone, refresh } = useRoom(
+    session?.code ?? null,
+    session?.accessToken ?? null,
+  );
 
   useEffect(() => {
     applyMuted(quiet);
@@ -124,8 +127,14 @@ export function ScoreApp() {
               run(async () => {
                 if (view === "JOIN") {
                   const known = seatFor(input.code, input.name);
+                  const stillSeated = known
+                    ? await api.state(known.code, known.accessToken).then(
+                        (room) => room.meId !== null,
+                        () => false,
+                      )
+                    : false;
 
-                  if (known) {
+                  if (known && stillSeated) {
                     save({
                       code: known.code,
                       playerId: known.playerId,
@@ -135,6 +144,10 @@ export function ScoreApp() {
                     setView("HOME");
 
                     return;
+                  }
+
+                  if (known) {
+                    forget(known.code);
                   }
                 }
 
@@ -175,10 +188,36 @@ export function ScoreApp() {
     );
   }
 
+  const leaveForGood = () => {
+    forget(session.code);
+    clear();
+    setView("HOME");
+  };
+
+  if (gone) {
+    return (
+      <OutOfRoomScreen
+        title="Essa sala acabou"
+        message={`A sala ${session.code} não existe mais. Cada sala some 24 horas depois de aberta. Para jogar, abra uma nova.`}
+        onHome={leaveForGood}
+      />
+    );
+  }
+
   if (!state || state.room.code.toUpperCase() !== session.code.toUpperCase()) {
     return (
-      <div className="stage-cream flex min-h-dvh items-center justify-center px-8">
+      <div className="stage-cream flex min-h-dvh flex-col items-center justify-center gap-4 px-8">
         <p className="display text-lg text-ink/70">Entrando na sala...</p>
+        <button
+          type="button"
+          onClick={() => {
+            clear();
+            setView("HOME");
+          }}
+          className="display cursor-pointer rounded-xl px-3 py-2 text-sm text-ink/45 transition-colors hover:text-ink"
+        >
+          Voltar para o início
+        </button>
       </div>
     );
   }
@@ -194,13 +233,14 @@ export function ScoreApp() {
 
   if (!me && state.room.phase !== RoomPhase.Finished) {
     return (
-      <RemovedScreen
-        room={state.room}
-        onHome={() => {
-          forget(session.code);
-          clear();
-          setView("HOME");
-        }}
+      <OutOfRoomScreen
+        title="Você não está mais nesta mesa"
+        message={
+          state.room.phase === RoomPhase.Lobby
+            ? `Quem abriu a sala tirou você, ou o código ${state.room.code} já é de outra sala. Para entrar, use o código de novo.`
+            : `Quem abriu a sala tirou você, ou o código ${state.room.code} já é de outra partida. Como ela já começou, não dá para entrar nela.`
+        }
+        onHome={leaveForGood}
       />
     );
   }

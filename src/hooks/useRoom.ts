@@ -1,12 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, type RoomState } from "@/lib/api";
+import { api, ApiError, type RoomState } from "@/lib/api";
 
 const pollMs = 1500;
 
+function seatKey(code: string, token: string | null): string {
+  return `${code}:${token ?? ""}`;
+}
+
+function roomIsGone(cause: unknown): boolean {
+  return cause instanceof ApiError && cause.status === 404;
+}
+
 export function useRoom(code: string | null, token: string | null) {
   const [state, setState] = useState<RoomState | null>(null);
+  const [goneKey, setGoneKey] = useState<string | null>(null);
+  const key = code ? seatKey(code, token) : null;
 
   const refresh = useCallback(async () => {
     if (!code) {
@@ -15,8 +25,10 @@ export function useRoom(code: string | null, token: string | null) {
 
     try {
       setState(await api.state(code, token ?? undefined));
-    } catch {
-      return;
+    } catch (cause) {
+      if (roomIsGone(cause)) {
+        setGoneKey(seatKey(code, token));
+      }
     }
   }, [code, token]);
 
@@ -38,8 +50,10 @@ export function useRoom(code: string | null, token: string | null) {
         if (alive) {
           setState(next);
         }
-      } catch {
-        return;
+      } catch (cause) {
+        if (alive && roomIsGone(cause)) {
+          setGoneKey(seatKey(code, token));
+        }
       }
     };
 
@@ -53,5 +67,9 @@ export function useRoom(code: string | null, token: string | null) {
     };
   }, [code, token]);
 
-  return { state: code ? state : null, refresh };
+  return {
+    state: code ? state : null,
+    gone: key !== null && goneKey === key,
+    refresh,
+  };
 }

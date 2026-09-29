@@ -11,6 +11,16 @@ export interface JoinResponse {
   name: string;
 }
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 const offlineMessage = "Sem internet aqui. Veja a conexão e tente de novo.";
 const unreadableMessage = "A resposta veio estranha. Tente de novo.";
 
@@ -56,7 +66,10 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   }
 
   if (!response.ok) {
-    throw new Error((payload as { error?: string } | null)?.error ?? messageForStatus(response.status));
+    throw new ApiError(
+      (payload as { error?: string } | null)?.error ?? messageForStatus(response.status),
+      response.status,
+    );
   }
 
   if (payload === null) {

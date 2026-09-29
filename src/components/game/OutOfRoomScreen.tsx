@@ -3,14 +3,14 @@
 import { Button } from "@/components/ui/Button";
 import { Screen } from "@/components/ui/Screen";
 import { Wordmark } from "@/components/ui/Wordmark";
-import { RoomPhase, type RoomRow } from "@/types/room";
 
-interface RemovedScreenProps {
-  room: RoomRow;
+interface OutOfRoomScreenProps {
+  title: string;
+  message: string;
   onHome: () => void;
 }
 
-export function RemovedScreen({ room, onHome }: RemovedScreenProps) {
+export function OutOfRoomScreen({ title, message, onHome }: OutOfRoomScreenProps) {
   return (
     <Screen
       footer={
@@ -24,12 +24,8 @@ export function RemovedScreen({ room, onHome }: RemovedScreenProps) {
       </header>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-        <span className="display text-3xl text-ink">Você saiu desta mesa</span>
-        <p className="max-w-xs text-sm font-semibold text-ink/60">
-          {room.phase === RoomPhase.Lobby
-            ? `Quem abriu a sala tirou você. Se foi engano, entre de novo com o código ${room.code}.`
-            : `Quem abriu a sala tirou você da partida ${room.code}. Como ela já começou, não dá para voltar nela.`}
-        </p>
+        <span className="display text-3xl text-ink">{title}</span>
+        <p className="max-w-xs text-sm font-semibold text-ink/60">{message}</p>
       </div>
     </Screen>
   );
