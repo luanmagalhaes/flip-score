@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ServiceError } from "@/lib/errors";
+import { checked, ServiceError } from "@/lib/errors";
 import { maxNameLength, maxPlayers, minPlayers } from "@/lib/game/limits";
 import { modifiers as allowedModifiers, highestCard, lowestCard } from "@/lib/game/rules";
 import { missingLaunch, totalsByPlayer, withTotals } from "@/lib/game/round";
@@ -29,11 +29,9 @@ function cleanName(value: string): string {
 }
 
 export async function loadRoom(code: string): Promise<RoomRow> {
-  const { data } = await serverClient()
-    .from("fs_rooms")
-    .select("*")
-    .eq("code", code.toUpperCase())
-    .maybeSingle();
+  const data = checked(
+    await serverClient().from("fs_rooms").select("*").eq("code", code.toUpperCase()).maybeSingle(),
+  );
 
   if (!data) {
     throw new ServiceError("Essa sala não existe mais", 404);
@@ -44,22 +42,22 @@ export async function loadRoom(code: string): Promise<RoomRow> {
 
 export async function loadPlayer(room: RoomRow, token: string): Promise<PlayerRow> {
   const client = serverClient();
-  const { data: secret } = await client
-    .from("fs_player_secrets")
-    .select("player_id")
-    .eq("room_id", room.id)
-    .eq("access_token", token)
-    .maybeSingle();
+  const secret = checked(
+    await client
+      .from("fs_player_secrets")
+      .select("player_id")
+      .eq("room_id", room.id)
+      .eq("access_token", token)
+      .maybeSingle(),
+  );
 
   if (!secret) {
     throw new ServiceError("Sessão inválida para esta sala", 401);
   }
 
-  const { data: player } = await client
-    .from("fs_players")
-    .select("*")
-    .eq("id", secret.player_id as string)
-    .maybeSingle();
+  const player = checked(
+    await client.from("fs_players").select("*").eq("id", secret.player_id as string).maybeSingle(),
+  );
 
   if (!player) {
     throw new ServiceError("Você não está mais nesta sala", 404);
@@ -69,11 +67,9 @@ export async function loadPlayer(room: RoomRow, token: string): Promise<PlayerRo
 }
 
 export async function roster(roomId: string): Promise<PlayerRow[]> {
-  const { data } = await serverClient()
-    .from("fs_players")
-    .select("*")
-    .eq("room_id", roomId)
-    .order("seat");
+  const data = checked(
+    await serverClient().from("fs_players").select("*").eq("room_id", roomId).order("seat"),
+  );
 
   return (data ?? []) as PlayerRow[];
 }
@@ -81,21 +77,25 @@ export async function roster(roomId: string): Promise<PlayerRow[]> {
 export async function roomState(input: { code: string; token?: string }): Promise<RoomState> {
   const room = await loadRoom(input.code);
   const people = await roster(room.id);
-  const { data: entries } = await serverClient()
-    .from("fs_entries")
-    .select("id, player_id, round_number, numbers, modifiers, exit_kind, total, created_at, updated_at")
-    .eq("room_id", room.id)
-    .order("round_number");
+  const entries = checked(
+    await serverClient()
+      .from("fs_entries")
+      .select("id, player_id, round_number, numbers, modifiers, exit_kind, total, created_at, updated_at")
+      .eq("room_id", room.id)
+      .order("round_number"),
+  );
 
   let meId: string | null = null;
 
   if (input.token) {
-    const { data: secret } = await serverClient()
-      .from("fs_player_secrets")
-      .select("player_id")
-      .eq("room_id", room.id)
-      .eq("access_token", input.token)
-      .maybeSingle();
+    const secret = checked(
+      await serverClient()
+        .from("fs_player_secrets")
+        .select("player_id")
+        .eq("room_id", room.id)
+        .eq("access_token", input.token)
+        .maybeSingle(),
+    );
 
     meId = (secret?.player_id as string) ?? null;
   }
@@ -112,21 +112,14 @@ export async function createRoom(input: {
   isTest?: boolean;
 }) {
   const client = serverClient();
-  const { data: code, error: codeError } = await client.rpc("fs_generate_code");
-
-  if (codeError) {
-    throw new ServiceError(codeError.message, 500);
-  }
-
-  const { data: room, error: roomError } = await client
-    .from("fs_rooms")
-    .insert({ code, is_test: input.isTest ?? false })
-    .select()
-    .single();
-
-  if (roomError) {
-    throw new ServiceError(roomError.message, 500);
-  }
+  const code = checked(await client.rpc("fs_generate_code"));
+  const room = checked(
+    await client
+      .from("fs_rooms")
+      .insert({ code, is_test: input.isTest ?? false })
+      .select()
+      .single(),
+  );
 
   const joined = await joinRoom({
     code: room.code as string,
@@ -135,7 +128,9 @@ export async function createRoom(input: {
     emoji: input.emoji,
   });
 
-  await client.from("fs_rooms").update({ host_player_id: joined.playerId }).eq("id", room.id);
+  checked(
+    await client.from("fs_rooms").update({ host_player_id: joined.playerId }).eq("id", room.id),
+  );
 
   return joined;
 }
@@ -165,29 +160,29 @@ export async function joinRoom(input: {
     throw new ServiceError("Já tem alguém com esse nome na mesa", 409);
   }
 
-  const { data: player, error } = await client
-    .from("fs_players")
-    .insert({
-      room_id: room.id,
-      name,
-      avatar: input.avatar ?? null,
-      emoji: input.emoji ?? null,
-      seat: Math.max(0, ...people.map((person) => person.seat)) + 1,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw new ServiceError(error.message, 500);
-  }
+  const player = checked(
+    await client
+      .from("fs_players")
+      .insert({
+        room_id: room.id,
+        name,
+        avatar: input.avatar ?? null,
+        emoji: input.emoji ?? null,
+        seat: Math.max(0, ...people.map((person) => person.seat)) + 1,
+      })
+      .select()
+      .single(),
+  );
 
   const accessToken = randomUUID().replace(/-/g, "");
 
-  await client.from("fs_player_secrets").insert({
-    room_id: room.id,
-    player_id: player.id,
-    access_token: accessToken,
-  });
+  checked(
+    await client.from("fs_player_secrets").insert({
+      room_id: room.id,
+      player_id: player.id,
+      access_token: accessToken,
+    }),
+  );
 
   return {
     code: room.code,
@@ -219,7 +214,7 @@ export async function updateProfile(input: {
     throw new ServiceError("Nada para mudar", 422);
   }
 
-  await serverClient().from("fs_players").update(patch).eq("id", me.id);
+  checked(await serverClient().from("fs_players").update(patch).eq("id", me.id));
 
   return roomState({ code: input.code, token: input.token });
 }
@@ -242,11 +237,13 @@ export async function startMatch(input: { code: string; token: string }) {
     throw new ServiceError(`Precisa de pelo menos ${minPlayers} jogadores`, 409);
   }
 
-  await serverClient()
-    .from("fs_rooms")
-    .update({ phase: RoomPhase.Playing, round_number: 1 })
-    .eq("id", room.id)
-    .eq("phase", RoomPhase.Lobby);
+  checked(
+    await serverClient()
+      .from("fs_rooms")
+      .update({ phase: RoomPhase.Playing, round_number: 1 })
+      .eq("id", room.id)
+      .eq("phase", RoomPhase.Lobby),
+  );
 
   return roomState({ code: input.code, token: input.token });
 }
@@ -293,10 +290,9 @@ function checkedExit(value: unknown): ExitKind {
 
 async function refreshTotals(roomId: string) {
   const client = serverClient();
-  const { data: entries } = await client
-    .from("fs_entries")
-    .select("player_id, total")
-    .eq("room_id", roomId);
+  const entries = checked(
+    await client.from("fs_entries").select("player_id, total").eq("room_id", roomId),
+  );
 
   const tally = totalsByPlayer((entries ?? []) as Array<{ player_id: string; total: number }>);
   const people = await roster(roomId);
@@ -322,7 +318,7 @@ async function saveMatch(
     return;
   }
 
-  await serverClient()
+  const { error } = await serverClient()
     .from("fs_matches")
     .insert({
       room_code: room.code,
@@ -333,16 +329,22 @@ async function saveMatch(
         score: person.total,
       })),
     });
+
+  if (error) {
+    console.error("match not saved to history", room.code, error);
+  }
 }
 
 async function settleRound(room: RoomRow) {
   const client = serverClient();
   const people = await refreshTotals(room.id);
-  const { data: entries } = await client
-    .from("fs_entries")
-    .select("player_id, round_number")
-    .eq("room_id", room.id)
-    .eq("round_number", room.round_number);
+  const entries = checked(
+    await client
+      .from("fs_entries")
+      .select("player_id, round_number")
+      .eq("room_id", room.id)
+      .eq("round_number", room.round_number),
+  );
 
   const launched = (entries ?? []) as Array<{ player_id: string; round_number: number }>;
 
@@ -353,16 +355,18 @@ async function settleRound(room: RoomRow) {
   const front = champions(people.map((person) => ({ playerId: person.id, total: person.total })));
 
   if (front.length > 0) {
-    const { data: closed } = await client
-      .from("fs_rooms")
-      .update({
-        phase: RoomPhase.Finished,
-        winner_player_id: front[0].playerId,
-        finished_at: new Date().toISOString(),
-      })
-      .eq("id", room.id)
-      .eq("phase", RoomPhase.Playing)
-      .select("id");
+    const closed = checked(
+      await client
+        .from("fs_rooms")
+        .update({
+          phase: RoomPhase.Finished,
+          winner_player_id: front[0].playerId,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", room.id)
+        .eq("phase", RoomPhase.Playing)
+        .select("id"),
+    );
 
     if ((closed ?? []).length > 0) {
       await saveMatch(room, people, front[0].playerId);
@@ -371,11 +375,13 @@ async function settleRound(room: RoomRow) {
     return;
   }
 
-  await client
-    .from("fs_rooms")
-    .update({ round_number: room.round_number + 1 })
-    .eq("id", room.id)
-    .eq("round_number", room.round_number);
+  checked(
+    await client
+      .from("fs_rooms")
+      .update({ round_number: room.round_number + 1 })
+      .eq("id", room.id)
+      .eq("round_number", room.round_number),
+  );
 }
 
 export async function saveEntry(input: {
@@ -408,13 +414,15 @@ export async function saveEntry(input: {
   const exitKind = checkedExit(input.exitKind);
   const total = roundScore({ numbers, modifiers: list, busted: exitKind === ExitKind.Bust });
 
-  const { data: existing } = await serverClient()
-    .from("fs_entries")
-    .select("id")
-    .eq("room_id", room.id)
-    .eq("player_id", me.id)
-    .eq("round_number", roundNumber)
-    .maybeSingle();
+  const existing = checked(
+    await serverClient()
+      .from("fs_entries")
+      .select("id")
+      .eq("room_id", room.id)
+      .eq("player_id", me.id)
+      .eq("round_number", roundNumber)
+      .maybeSingle(),
+  );
 
   if (existing && !input.replacing) {
     throw new ServiceError(
@@ -423,25 +431,23 @@ export async function saveEntry(input: {
     );
   }
 
-  const { error } = await serverClient()
-    .from("fs_entries")
-    .upsert(
-      {
-        room_id: room.id,
-        player_id: me.id,
-        round_number: roundNumber,
-        numbers,
-        modifiers: list,
-        exit_kind: exitKind,
-        total,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "room_id,player_id,round_number" },
-    );
-
-  if (error) {
-    throw new ServiceError(error.message, 500);
-  }
+  checked(
+    await serverClient()
+      .from("fs_entries")
+      .upsert(
+        {
+          room_id: room.id,
+          player_id: me.id,
+          round_number: roundNumber,
+          numbers,
+          modifiers: list,
+          exit_kind: exitKind,
+          total,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "room_id,player_id,round_number" },
+      ),
+  );
 
   await settleRound(room);
 
@@ -453,12 +459,14 @@ export async function removeEntry(input: { code: string; token: string; entryId:
   const me = await loadPlayer(room, input.token);
   const client = serverClient();
 
-  const { data: entry } = await client
-    .from("fs_entries")
-    .select("id, player_id")
-    .eq("id", input.entryId)
-    .eq("room_id", room.id)
-    .maybeSingle();
+  const entry = checked(
+    await client
+      .from("fs_entries")
+      .select("id, player_id")
+      .eq("id", input.entryId)
+      .eq("room_id", room.id)
+      .maybeSingle(),
+  );
 
   if (!entry) {
     throw new ServiceError("Essa rodada não está mais no placar", 404);
@@ -468,7 +476,7 @@ export async function removeEntry(input: { code: string; token: string; entryId:
     throw new ServiceError("Cada um apaga só a própria pontuação", 403);
   }
 
-  await client.from("fs_entries").delete().eq("id", entry.id);
+  checked(await client.from("fs_entries").delete().eq("id", entry.id));
   await refreshTotals(room.id);
 
   return roomState({ code: input.code, token: input.token });
@@ -491,18 +499,20 @@ export async function removePlayer(input: { code: string; token: string; playerI
     throw new ServiceError("A partida já acabou", 409);
   }
 
-  const { data: target } = await client
-    .from("fs_players")
-    .select("id")
-    .eq("id", input.playerId)
-    .eq("room_id", room.id)
-    .maybeSingle();
+  const target = checked(
+    await client
+      .from("fs_players")
+      .select("id")
+      .eq("id", input.playerId)
+      .eq("room_id", room.id)
+      .maybeSingle(),
+  );
 
   if (!target) {
     throw new ServiceError("Essa pessoa não está mais na mesa", 404);
   }
 
-  await client.from("fs_players").delete().eq("id", target.id as string);
+  checked(await client.from("fs_players").delete().eq("id", target.id as string));
   await refreshTotals(room.id);
 
   if (room.phase === RoomPhase.Playing) {
@@ -519,17 +529,19 @@ export async function leaveRoom(input: { code: string; token: string }) {
   const people = await roster(room.id);
 
   if (people.length === 1) {
-    await client.from("fs_rooms").delete().eq("id", room.id);
+    checked(await client.from("fs_rooms").delete().eq("id", room.id));
 
     return { left: true as const, lastOne: true as const };
   }
 
-  await client.from("fs_players").delete().eq("id", me.id);
+  checked(await client.from("fs_players").delete().eq("id", me.id));
 
   if (room.host_player_id === me.id) {
     const next = people.find((person) => person.id !== me.id);
 
-    await client.from("fs_rooms").update({ host_player_id: next?.id ?? null }).eq("id", room.id);
+    checked(
+      await client.from("fs_rooms").update({ host_player_id: next?.id ?? null }).eq("id", room.id),
+    );
   }
 
   await refreshTotals(room.id);

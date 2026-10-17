@@ -11,9 +11,11 @@ import { OutOfRoomScreen } from "@/components/game/OutOfRoomScreen";
 import { RoundSheet, type SheetEntry } from "@/components/game/RoundSheet";
 import { TableScreen } from "@/components/game/TableScreen";
 import { VictoryScreen } from "@/components/game/VictoryScreen";
+import { TroubleBanner } from "@/components/ui/TroubleBanner";
 import { useRoom } from "@/hooks/useRoom";
 import { useSession } from "@/hooks/useSession";
 import { api } from "@/lib/api";
+import { readableError } from "@/lib/friendly";
 import { applyMuted, sound, unlockSound } from "@/lib/sound";
 import {
   mutedSnapshot,
@@ -48,7 +50,7 @@ export function ScoreApp() {
     serverTutorialSnapshot,
   );
   const quiet = useSyncExternalStore(subscribeMatch, mutedSnapshot, serverMutedSnapshot);
-  const { state, gone, refresh } = useRoom(
+  const { state, gone, trouble, refresh } = useRoom(
     session?.code ?? null,
     session?.accessToken ?? null,
   );
@@ -82,7 +84,7 @@ export function ScoreApp() {
     try {
       await work();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não consegui completar isso.");
+      setError(readableError(cause));
     } finally {
       setBusy(false);
     }
@@ -208,6 +210,14 @@ export function ScoreApp() {
     return (
       <div className="stage-cream flex min-h-dvh flex-col items-center justify-center gap-4 px-8">
         <p className="display text-lg text-ink/70">Entrando na sala...</p>
+        {trouble ? (
+          <p
+            role="alert"
+            className="max-w-xs rounded-2xl border-2 border-ink bg-flame-soft px-4 py-3 text-center text-sm font-semibold text-ink"
+          >
+            {trouble}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() => {
@@ -250,12 +260,15 @@ export function ScoreApp() {
     const top = best[0]?.total ?? 0;
 
     return (
-      <VictoryScreen
-        winners={best.filter((person) => person.total === top)}
-        ranked={best}
-        playedRounds={state.room.round_number}
-        onNewTable={leave}
-      />
+      <>
+        <TroubleBanner message={trouble} />
+        <VictoryScreen
+          winners={best.filter((person) => person.total === top)}
+          ranked={best}
+          playedRounds={state.room.round_number}
+          onNewTable={leave}
+        />
+      </>
     );
   }
 
@@ -263,6 +276,7 @@ export function ScoreApp() {
     return (
       <>
         {rulesGate}
+        <TroubleBanner message={trouble} />
         <LobbyScreen
           room={state.room}
           players={state.players}
@@ -295,6 +309,7 @@ export function ScoreApp() {
   return (
     <>
       {rulesGate}
+      <TroubleBanner message={trouble} />
 
       {listingMine ? (
         <MyRounds

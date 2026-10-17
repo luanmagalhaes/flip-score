@@ -1,4 +1,10 @@
-import { ServiceError } from "@/lib/errors";
+import {
+  brokenRequestMessage,
+  databaseDownMessage,
+  looksLikeOutage,
+  serverTroubleMessage,
+  ServiceError,
+} from "@/lib/errors";
 
 export function playerToken(request: Request): string {
   return request.headers.get("x-player-token") ?? "";
@@ -12,8 +18,16 @@ export async function handle<T>(work: () => Promise<T>): Promise<Response> {
       return Response.json({ error: cause.message }, { status: cause.status });
     }
 
-    const message = cause instanceof Error ? cause.message : "Erro inesperado";
+    console.error("unexpected failure", cause);
 
-    return Response.json({ error: message }, { status: 500 });
+    if (cause instanceof SyntaxError) {
+      return Response.json({ error: brokenRequestMessage }, { status: 400 });
+    }
+
+    const detail = cause instanceof Error ? `${cause.name} ${cause.message}` : String(cause);
+
+    return looksLikeOutage(detail)
+      ? Response.json({ error: databaseDownMessage }, { status: 503 })
+      : Response.json({ error: serverTroubleMessage }, { status: 500 });
   }
 }

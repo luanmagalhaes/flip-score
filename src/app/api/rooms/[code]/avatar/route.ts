@@ -1,5 +1,5 @@
 import { handle, playerToken } from "@/app/api/_shared";
-import { ServiceError } from "@/lib/errors";
+import { checked, databaseError, ServiceError } from "@/lib/errors";
 import { loadPlayer, loadRoom } from "@/lib/game/service";
 import { serverClient } from "@/lib/supabase";
 
@@ -39,13 +39,15 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
       .upload(path, bytes, { contentType: mime, upsert: true });
 
     if (error) {
-      throw new ServiceError("Não consegui guardar essa foto", 500);
+      const failure = databaseError(error);
+
+      throw failure.status === 503 ? failure : new ServiceError("Não consegui guardar essa foto", 500);
     }
 
     const { data: published } = client.storage.from("fs-avatars").getPublicUrl(path);
     const avatar = `${published.publicUrl}?v=${Date.now()}`;
 
-    await client.from("fs_players").update({ avatar, emoji: null }).eq("id", me.id);
+    checked(await client.from("fs_players").update({ avatar, emoji: null }).eq("id", me.id));
 
     return { avatar };
   });

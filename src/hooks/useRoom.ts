@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, type RoomState } from "@/lib/api";
+import { readableError } from "@/lib/friendly";
 
 const pollMs = 1500;
 
@@ -16,7 +17,25 @@ function roomIsGone(cause: unknown): boolean {
 export function useRoom(code: string | null, token: string | null) {
   const [state, setState] = useState<RoomState | null>(null);
   const [goneKey, setGoneKey] = useState<string | null>(null);
+  const [trouble, setTrouble] = useState<string | null>(null);
   const key = code ? seatKey(code, token) : null;
+
+  const absorb = useCallback(
+    (cause: unknown) => {
+      if (!code) {
+        return;
+      }
+
+      if (roomIsGone(cause)) {
+        setGoneKey(seatKey(code, token));
+
+        return;
+      }
+
+      setTrouble(readableError(cause));
+    },
+    [code, token],
+  );
 
   const refresh = useCallback(async () => {
     if (!code) {
@@ -25,12 +44,11 @@ export function useRoom(code: string | null, token: string | null) {
 
     try {
       setState(await api.state(code, token ?? undefined));
+      setTrouble(null);
     } catch (cause) {
-      if (roomIsGone(cause)) {
-        setGoneKey(seatKey(code, token));
-      }
+      absorb(cause);
     }
-  }, [code, token]);
+  }, [code, token, absorb]);
 
   useEffect(() => {
     if (!code) {
@@ -49,10 +67,11 @@ export function useRoom(code: string | null, token: string | null) {
 
         if (alive) {
           setState(next);
+          setTrouble(null);
         }
       } catch (cause) {
-        if (alive && roomIsGone(cause)) {
-          setGoneKey(seatKey(code, token));
+        if (alive) {
+          absorb(cause);
         }
       }
     };
@@ -65,11 +84,12 @@ export function useRoom(code: string | null, token: string | null) {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [code, token]);
+  }, [code, token, absorb]);
 
   return {
     state: code ? state : null,
     gone: key !== null && goneKey === key,
+    trouble: code ? trouble : null,
     refresh,
   };
 }

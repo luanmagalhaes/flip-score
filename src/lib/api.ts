@@ -1,3 +1,4 @@
+import { FriendlyError } from "@/lib/friendly";
 import type { RoomState } from "@/types/room";
 import type { Modifier } from "@/lib/game/rules";
 import type { ExitKind } from "@/types/room";
@@ -11,7 +12,7 @@ export interface JoinResponse {
   name: string;
 }
 
-export class ApiError extends Error {
+export class ApiError extends FriendlyError {
   status: number;
 
   constructor(message: string, status: number) {
@@ -21,8 +22,9 @@ export class ApiError extends Error {
   }
 }
 
-const offlineMessage = "Sem internet aqui. Veja a conexão e tente de novo.";
-const unreadableMessage = "A resposta veio estranha. Tente de novo.";
+const offlineMessage =
+  "Não consegui falar com o servidor do jogo. Veja se a internet está funcionando e tente de novo.";
+const unreadableMessage = "A resposta do servidor veio estranha. Tente de novo.";
 
 function messageForStatus(status: number): string {
   if (status === 404) {
@@ -33,11 +35,25 @@ function messageForStatus(status: number): string {
     return "Você não tem acesso a isso.";
   }
 
+  if (status === 503) {
+    return "O banco de dados do jogo está fora do ar agora. Espere uns minutos e tente de novo.";
+  }
+
+  if (status === 504) {
+    return "O servidor do jogo demorou demais para responder. Tente de novo.";
+  }
+
   if (status >= 500) {
-    return "O servidor tropeçou. Tente de novo.";
+    return "Deu um problema no servidor do jogo. Tente de novo daqui a pouco.";
   }
 
   return "Não consegui completar essa ação.";
+}
+
+function serverMessage(payload: unknown, status: number): string {
+  const error = (payload as { error?: unknown } | null)?.error;
+
+  return typeof error === "string" && error.length > 0 ? error : messageForStatus(status);
 }
 
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
@@ -54,7 +70,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   try {
     response = await fetch(path, { ...init, headers, cache: "no-store" });
   } catch {
-    throw new Error(offlineMessage);
+    throw new FriendlyError(offlineMessage);
   }
 
   let payload: unknown = null;
@@ -66,14 +82,11 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   }
 
   if (!response.ok) {
-    throw new ApiError(
-      (payload as { error?: string } | null)?.error ?? messageForStatus(response.status),
-      response.status,
-    );
+    throw new ApiError(serverMessage(payload, response.status), response.status);
   }
 
   if (payload === null) {
-    throw new Error(unreadableMessage);
+    throw new FriendlyError(unreadableMessage);
   }
 
   return payload as T;
@@ -153,7 +166,7 @@ export const api = {
         headers: { "Content-Type": blob.type, "x-player-token": token },
       });
     } catch {
-      throw new Error(offlineMessage);
+      throw new FriendlyError(offlineMessage);
     }
 
     let payload: unknown = null;
@@ -165,9 +178,7 @@ export const api = {
     }
 
     if (!response.ok) {
-      throw new Error(
-        (payload as { error?: string } | null)?.error ?? messageForStatus(response.status),
-      );
+      throw new ApiError(serverMessage(payload, response.status), response.status);
     }
 
     return payload as { avatar: string };
