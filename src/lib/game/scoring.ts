@@ -1,4 +1,4 @@
-import { flipSevenBonus, flipSevenCount, type Modifier } from "@/lib/game/rules";
+import { sevenBonus, sevenCount, type Modifier } from "@/lib/game/rules";
 
 export interface RoundEntry {
   numbers: number[];
@@ -11,7 +11,7 @@ export interface RoundBreakdown {
   multiplier: number;
   multiplied: number;
   bonus: number;
-  flipSeven: boolean;
+  sevenDistinct: boolean;
   total: number;
 }
 
@@ -21,7 +21,7 @@ export function emptyRound(): RoundEntry {
 
 export function breakdown(entry: RoundEntry): RoundBreakdown {
   if (entry.busted) {
-    return { sum: 0, multiplier: 1, multiplied: 0, bonus: 0, flipSeven: false, total: 0 };
+    return { sum: 0, multiplier: 1, multiplied: 0, bonus: 0, sevenDistinct: false, total: 0 };
   }
 
   const unique = [...new Set(entry.numbers)];
@@ -31,10 +31,10 @@ export function breakdown(entry: RoundEntry): RoundBreakdown {
   const flat = entry.modifiers
     .filter((modifier) => modifier !== "x2")
     .reduce((running, modifier) => running + Number(modifier.replace("+", "")), 0);
-  const flipSeven = unique.length >= flipSevenCount;
-  const bonus = flat + (flipSeven ? flipSevenBonus : 0);
+  const sevenDistinct = unique.length >= sevenCount;
+  const bonus = flat + (sevenDistinct ? sevenBonus : 0);
 
-  return { sum, multiplier, multiplied, bonus, flipSeven, total: multiplied + bonus };
+  return { sum, multiplier, multiplied, bonus, sevenDistinct, total: multiplied + bonus };
 }
 
 export function roundScore(entry: RoundEntry): number {

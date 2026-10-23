@@ -108,7 +108,7 @@ export const sound = {
       { hz: 880, at: 0.08, seconds: 0.16, wave: "triangle", gain: 0.1 },
     ]),
 
-  flipSeven: () =>
+  sevenBurst: () =>
     play([
       { hz: 523.25, at: 0, seconds: 0.11, wave: "square", gain: 0.09 },
       { hz: 659.25, at: 0.1, seconds: 0.11, wave: "square", gain: 0.09 },

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { CardArt } from "@/components/game/CardArt";
-import { flipSevenBonus, flipSevenCount, targetScore } from "@/lib/game/rules";
+import { sevenBonus, sevenCount, targetScore } from "@/lib/game/rules";
 import { maxPlayers, minPlayers } from "@/lib/game/limits";
 
 interface HowToPlayProps {
@@ -43,7 +43,7 @@ interface Slide {
 
 const slides: Slide[] = [
   {
-    title: "Mas por que Flip 7?",
+    title: "Mas por que sete?",
     tone: "foil-band animate-foil-slide text-ink",
     art: (
       <div className="flex items-end justify-center gap-1">
@@ -60,11 +60,11 @@ const slides: Slide[] = [
     body: (
       <div className="flex flex-col gap-3 text-center">
         <p className="text-base leading-snug text-ink/80">
-          O nome vem do prêmio máximo do jogo: virar{" "}
-          <Good>{flipSevenCount} números diferentes</Good> numa rodada só.
+          Porque esse é o prêmio máximo do jogo: virar{" "}
+          <Good>{sevenCount} números diferentes</Good> numa rodada só.
         </p>
         <div className="rounded-2xl border-2 border-ink bg-aqua p-3">
-          <p className="display text-2xl leading-tight text-ink">Flip 7 = +{flipSevenBonus}</p>
+          <p className="display text-2xl leading-tight text-ink">Sete = +{sevenBonus}</p>
           <p className="mt-1 text-xs font-semibold text-ink/75">
             Além de somar os números, você ganha esse bônus de presente.
           </p>
@@ -105,7 +105,7 @@ const slides: Slide[] = [
           </p>
         </div>
         <p className="text-sm leading-snug text-ink/75">
-          A rodada acaba quando todo mundo parou ou estourou — ou quando alguém fecha o Flip 7.
+          A rodada acaba quando todo mundo parou ou estourou, ou quando alguém fecha o Sete.
         </p>
       </div>
     ),
@@ -180,7 +180,7 @@ const slides: Slide[] = [
           </div>
           <p className="mt-1.5 text-xs leading-snug text-ink/80">
             Também é na hora, sem guardar. Quem recebe é obrigado a virar{" "}
-            <Bad>três cartas seguidas</Bad>, só parando antes se estourar ou fechar o Flip 7. É a
+            <Bad>três cartas seguidas</Bad>, só parando antes se estourar ou fechar o Sete. É a
             carta mais cruel do baralho.
           </p>
         </div>
@@ -240,14 +240,14 @@ const slides: Slide[] = [
               2. Dobra com o <Gold>x2</Gold>, se tiver
             </li>
             <li>3. Só então soma os bônus fixos</li>
-            <li>4. E acrescenta os +{flipSevenBonus} do Flip 7</li>
+            <li>4. E acrescenta os +{sevenBonus} do Sete</li>
           </ol>
           <p className="mt-2 text-xs font-semibold text-ink/60">
             O app faz isso sozinho. É só tocar no que apareceu na mesa.
           </p>
         </div>
         <p className="text-sm leading-snug text-ink/75">
-          Bônus não é número: ter o <Gold>+10</Gold> não conta para fechar o Flip 7.
+          Bônus não é número: ter o <Gold>+10</Gold> não conta para fechar o Sete.
         </p>
       </div>
     ),

@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useEffectEvent } from "react";
-import { flipSevenBonus } from "@/lib/game/rules";
+import { sevenBonus } from "@/lib/game/rules";
 
-interface FlipSevenBurstProps {
+interface SevenBurstProps {
   onDone: () => void;
 }
 
-export function FlipSevenBurst({ onDone }: FlipSevenBurstProps) {
+export function SevenBurst({ onDone }: SevenBurstProps) {
   const finish = useEffectEvent(onDone);
 
   useEffect(() => {
@@ -26,10 +26,10 @@ export function FlipSevenBurst({ onDone }: FlipSevenBurstProps) {
 
       <div className="animate-card-spin-in">
         <div className="foil-band animate-foil-slide flex h-64 w-44 flex-col items-center justify-center gap-2 rounded-[1.5rem] border-[6px] border-ink shadow-[0_16px_0_var(--color-ink)] sm:h-72 sm:w-52">
-          <span className="display text-5xl leading-none text-ink sm:text-6xl">FLIP</span>
+          <span className="display text-5xl leading-none text-ink sm:text-6xl">SETE</span>
           <span className="display text-7xl leading-none text-flame sm:text-8xl">7</span>
           <span className="display mt-1 rounded-xl border-2 border-ink bg-paper px-3 py-1 text-base text-ink">
-            +{flipSevenBonus}
+            +{sevenBonus}
           </span>
         </div>
       </div>

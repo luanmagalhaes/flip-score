@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { breakdown, emptyRound, roundScore, totalFor } from "@/lib/game/scoring";
-import { flipSevenBonus } from "@/lib/game/rules";
+import { sevenBonus } from "@/lib/game/rules";
 
 const round = (numbers: number[], mods: string[] = [], busted = false) =>
   ({ numbers, modifiers: mods as never, busted });
@@ -28,10 +28,10 @@ describe("estourou", () => {
     expect(roundScore(round([12, 11, 10, 9], ["x2", "+10"], true))).toBe(0);
   });
 
-  it("não dá o bônus do Flip 7 para quem estourou", () => {
+  it("não dá o bônus do Sete para quem estourou", () => {
     const entry = round([1, 2, 3, 4, 5, 6, 7], [], true);
 
-    expect(breakdown(entry).flipSeven).toBe(false);
+    expect(breakdown(entry).sevenDistinct).toBe(false);
     expect(roundScore(entry)).toBe(0);
   });
 });
@@ -57,27 +57,27 @@ describe("modificadores", () => {
   });
 });
 
-describe("bônus do Flip 7", () => {
+describe("bônus do Sete", () => {
   it("entra sozinho quando fecham sete números diferentes", () => {
     const entry = round([0, 1, 2, 3, 4, 5, 6]);
 
-    expect(breakdown(entry).flipSeven).toBe(true);
-    expect(roundScore(entry)).toBe(21 + flipSevenBonus);
+    expect(breakdown(entry).sevenDistinct).toBe(true);
+    expect(roundScore(entry)).toBe(21 + sevenBonus);
   });
 
   it("não entra com seis números", () => {
-    expect(breakdown(round([1, 2, 3, 4, 5, 6])).flipSeven).toBe(false);
+    expect(breakdown(round([1, 2, 3, 4, 5, 6])).sevenDistinct).toBe(false);
   });
 
   it("não conta repetido para fechar os sete", () => {
-    expect(breakdown(round([1, 1, 2, 3, 4, 5, 6])).flipSeven).toBe(false);
+    expect(breakdown(round([1, 1, 2, 3, 4, 5, 6])).sevenDistinct).toBe(false);
   });
 
   it("soma com o multiplicador na ordem certa", () => {
     const entry = round([1, 2, 3, 4, 5, 6, 7], ["x2"]);
 
     expect(breakdown(entry).multiplied).toBe(56);
-    expect(roundScore(entry)).toBe(56 + flipSevenBonus);
+    expect(roundScore(entry)).toBe(56 + sevenBonus);
   });
 });
 

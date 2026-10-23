@@ -62,7 +62,7 @@ describe("chegada aos 200", () => {
   });
 });
 
-describe("baralho do Flip 7", () => {
+describe("baralho do jogo", () => {
   it("tem uma carta de cada número de 0 a 12", () => {
     expect(numberCards()).toHaveLength(13);
   });

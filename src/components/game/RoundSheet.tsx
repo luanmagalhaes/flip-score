@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { BustSlam } from "@/components/game/BustSlam";
-import { FlipSevenBurst } from "@/components/game/FlipSevenBurst";
+import { SevenBurst } from "@/components/game/SevenBurst";
 import { sound } from "@/lib/sound";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Button } from "@/components/ui/Button";
 import { breakdown } from "@/lib/game/scoring";
-import { flipSevenCount, modifiers, numberCards, type Modifier } from "@/lib/game/rules";
+import { modifiers, numberCards, sevenCount, type Modifier } from "@/lib/game/rules";
 import { points } from "@/utils/plural";
 import { ExitKind, type PlayerRow } from "@/types/room";
 
@@ -65,8 +65,8 @@ export function RoundSheet({
         ? current.numbers.filter((kept) => kept !== value)
         : [...current.numbers, value];
 
-      if (!had && numbers.length === flipSevenCount) {
-        sound.flipSeven();
+      if (!had && numbers.length === sevenCount) {
+        sound.sevenBurst();
         setBurst(true);
       } else if (!had) {
         sound.pick();
@@ -89,7 +89,7 @@ export function RoundSheet({
 
   return (
     <>
-      {burst ? <FlipSevenBurst onDone={() => setBurst(false)} /> : null}
+      {burst ? <SevenBurst onDone={() => setBurst(false)} /> : null}
       {slam ? <BustSlam player={player} onDone={() => setSlam(false)} /> : null}
 
       {confirming ? (
@@ -126,7 +126,7 @@ export function RoundSheet({
                     {entry.modifiers.length > 0 ? (
                       <li>Bônus: {entry.modifiers.join(", ")}</li>
                     ) : null}
-                    {detail.flipSeven ? <li>Flip 7 fechado</li> : null}
+                    {detail.sevenDistinct ? <li>Fechou o Sete</li> : null}
                   </ul>
                 </>
               )}
@@ -277,7 +277,7 @@ export function RoundSheet({
                 {detail.bonus > 0 ? (
                   <span className="flex justify-between">
                     <span>
-                      Bônus{detail.flipSeven ? ` · Flip ${flipSevenCount} fechado` : ""}
+                      Bônus{detail.sevenDistinct ? " · fechou o Sete" : ""}
                     </span>
                     <span className="tabular-nums">+{detail.bonus}</span>
                   </span>

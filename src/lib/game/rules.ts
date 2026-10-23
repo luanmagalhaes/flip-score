@@ -1,6 +1,6 @@
 export const targetScore = 200;
-export const flipSevenBonus = 15;
-export const flipSevenCount = 7;
+export const sevenBonus = 15;
+export const sevenCount = 7;
 export const lowestCard = 0;
 export const highestCard = 12;
 
