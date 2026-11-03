@@ -27,6 +27,13 @@ export function withTotals<T extends { id: string }>(
   return people.map((person) => ({ ...person, total: tally.get(person.id) ?? 0 }));
 }
 
+export function requiredPlayers<T extends { joined_round: number }>(
+  people: readonly T[],
+  roundNumber: number,
+): T[] {
+  return people.filter((person) => person.joined_round <= roundNumber);
+}
+
 export function missingLaunch<T extends { id: string }>(
   people: readonly T[],
   entries: readonly Launched[],

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { InviteModal } from "@/components/game/InviteModal";
 import { WaitingModal } from "@/components/game/WaitingModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Screen } from "@/components/ui/Screen";
 import { Wordmark } from "@/components/ui/Wordmark";
-import { missingLaunch } from "@/lib/game/round";
+import { maxPlayers } from "@/lib/game/limits";
+import { missingLaunch, requiredPlayers } from "@/lib/game/round";
 import { targetScore } from "@/lib/game/rules";
 import { joinNames, points, rounds } from "@/utils/plural";
 import { ExitKind, type EntryRow, type PlayerRow, type RoomRow } from "@/types/room";
@@ -61,10 +63,17 @@ export function TableScreen({
 }: TableScreenProps) {
   const [askingFixFor, setAskingFixFor] = useState<number | null>(null);
   const [confirmingRemoval, setConfirmingRemoval] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
   const ranked = [...players].sort((left, right) => right.total - left.total);
   const thisRound = entries.filter((entry) => entry.round_number === room.round_number);
   const mineThisRound = thisRound.find((entry) => entry.player_id === meId) ?? null;
-  const waiting = missingLaunch(players, entries, room.round_number);
+  const me = players.find((person) => person.id === meId) ?? null;
+  const meJoinsLater = me !== null && me.joined_round > room.round_number;
+  const waiting = missingLaunch(
+    requiredPlayers(players, room.round_number),
+    entries,
+    room.round_number,
+  );
   const othersWaiting = waiting.filter((person) => person.id !== meId);
   const someoneLaunched = thisRound.length > 0;
   const myEntries = entries.filter((entry) => entry.player_id === meId);
@@ -93,7 +102,18 @@ export function TableScreen({
     onFixRound(mineThisRound);
   };
 
-  const footer = !mineThisRound ? (
+  const footer = meJoinsLater ? (
+    <div className="flex flex-col gap-2">
+      <div className="rounded-2xl border-2 border-ink bg-cream px-3 py-2.5 text-center">
+        <span className="display block text-sm text-ink">
+          Você entra na rodada {me.joined_round}
+        </span>
+        <span className="block text-xs font-semibold text-ink/55">
+          A rodada {room.round_number} já estava rolando quando você sentou. Acompanhe o placar.
+        </span>
+      </div>
+    </div>
+  ) : !mineThisRound ? (
     <div className="flex flex-col gap-2">
       <Button variant="ink" size="lg" fullWidth disabled={busy} onClick={onNewRound}>
         Lançar minha rodada {room.round_number}
@@ -155,6 +175,14 @@ export function TableScreen({
         />
       ) : null}
 
+      {inviting ? (
+        <InviteModal
+          code={room.code}
+          roundNumber={someoneLaunched ? room.round_number + 1 : room.round_number}
+          onClose={() => setInviting(false)}
+        />
+      ) : null}
+
       {pendingRemoval ? (
         <ConfirmModal
           title={`Tirar ${pendingRemoval.name} da mesa?`}
@@ -165,8 +193,8 @@ export function TableScreen({
           body={
             <>
               <p>
-                <strong className="text-ink">{pendingRemoval.name}</strong> sai da partida na hora e
-                não consegue voltar para esta sala.
+                <strong className="text-ink">{pendingRemoval.name}</strong> sai da partida na hora.
+                Se for engano, dá para voltar com o código {room.code}, começando do zero.
               </p>
               <ul className="mt-3 flex flex-col gap-1.5 text-xs">
                 <li className="rounded-xl bg-sky/50 px-3 py-2">
@@ -230,6 +258,7 @@ export function TableScreen({
             {ranked.map((person, index) => {
               const progress = Math.min(100, (person.total / targetScore) * 100);
               const entry = thisRound.find((row) => row.player_id === person.id) ?? null;
+              const joinsLater = person.joined_round > room.round_number;
 
               return (
                 <li
@@ -268,16 +297,20 @@ export function TableScreen({
                       className={`display rounded-full px-2 py-1 text-[0.6rem] ${
                         entry
                           ? exitSkins[entry.exit_kind]
-                          : someoneLaunched
-                            ? "bg-flame-soft text-ink"
-                            : "bg-ink/10 text-ink/55"
+                          : joinsLater
+                            ? "bg-sky text-ink"
+                            : someoneLaunched
+                              ? "bg-flame-soft text-ink"
+                              : "bg-ink/10 text-ink/55"
                       }`}
                     >
                       {entry
                         ? `${exitLabels[entry.exit_kind]} ${entry.total}`
-                        : someoneLaunched
-                          ? "Falta lançar"
-                          : "Jogando"}
+                        : joinsLater
+                          ? `Entra na rodada ${person.joined_round}`
+                          : someoneLaunched
+                            ? "Falta lançar"
+                            : "Jogando"}
                     </span>
                     {isHost && person.id !== meId ? (
                       <button
@@ -294,6 +327,18 @@ export function TableScreen({
                 </li>
               );
             })}
+
+            {players.length < maxPlayers ? (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setInviting(true)}
+                  className="display w-full cursor-pointer rounded-2xl border-2 border-dashed border-ink/30 p-3 text-sm text-ink/50 transition-colors hover:border-ink hover:text-ink"
+                >
+                  + Chamar mais alguém
+                </button>
+              </li>
+            ) : null}
           </ul>
 
           {error ? (

@@ -37,6 +37,7 @@ export interface PlayerRow {
   emoji: string | null;
   seat: number;
   total: number;
+  joined_round: number;
   created_at: string;
 }
 

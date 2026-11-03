@@ -106,8 +106,9 @@ export function LobbyScreen({
           body={
             <>
               <p>
-                A mesa fecha com <strong className="text-ink">{players.length} jogadores</strong>.
-                Quem chegar depois não entra mais.
+                A partida começa com{" "}
+                <strong className="text-ink">{players.length} jogadores</strong>. Quem chegar depois
+                ainda entra com o código {room.code}, começando do zero.
               </p>
               <ul className="mt-3 flex flex-col gap-1.5 text-xs">
                 <li className="rounded-xl bg-sky/50 px-3 py-2">

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { checked, ServiceError } from "@/lib/errors";
 import { maxNameLength, maxPlayers, minPlayers } from "@/lib/game/limits";
 import { modifiers as allowedModifiers, highestCard, lowestCard } from "@/lib/game/rules";
-import { missingLaunch, totalsByPlayer, withTotals } from "@/lib/game/round";
+import { missingLaunch, requiredPlayers, totalsByPlayer, withTotals } from "@/lib/game/round";
 import { roundScore } from "@/lib/game/scoring";
 import { champions } from "@/lib/game/standings";
 import { serverClient } from "@/lib/supabase";
@@ -135,6 +135,23 @@ export async function createRoom(input: {
   return joined;
 }
 
+async function entryRound(room: RoomRow): Promise<number> {
+  if (room.phase === RoomPhase.Lobby) {
+    return 1;
+  }
+
+  const launched = checked(
+    await serverClient()
+      .from("fs_entries")
+      .select("id")
+      .eq("room_id", room.id)
+      .eq("round_number", room.round_number)
+      .limit(1),
+  );
+
+  return (launched ?? []).length > 0 ? room.round_number + 1 : room.round_number;
+}
+
 export async function joinRoom(input: {
   code: string;
   name: string;
@@ -144,8 +161,8 @@ export async function joinRoom(input: {
   const client = serverClient();
   const room = await loadRoom(input.code);
 
-  if (room.phase !== RoomPhase.Lobby) {
-    throw new ServiceError("Essa partida já começou", 409);
+  if (room.phase === RoomPhase.Finished) {
+    throw new ServiceError("Essa partida já acabou", 409);
   }
 
   const people = await roster(room.id);
@@ -169,6 +186,7 @@ export async function joinRoom(input: {
         avatar: input.avatar ?? null,
         emoji: input.emoji ?? null,
         seat: Math.max(0, ...people.map((person) => person.seat)) + 1,
+        joined_round: await entryRound(room),
       })
       .select()
       .single(),
@@ -347,8 +365,9 @@ async function settleRound(room: RoomRow) {
   );
 
   const launched = (entries ?? []) as Array<{ player_id: string; round_number: number }>;
+  const required = requiredPlayers(people, room.round_number);
 
-  if (missingLaunch(people, launched, room.round_number).length > 0) {
+  if (missingLaunch(required, launched, room.round_number).length > 0) {
     return;
   }
 
@@ -407,6 +426,13 @@ export async function saveEntry(input: {
 
   if (roundNumber < 1 || roundNumber > room.round_number) {
     throw new ServiceError("Essa rodada não existe", 422);
+  }
+
+  if (roundNumber < me.joined_round) {
+    throw new ServiceError(
+      `Você sentou na rodada ${me.joined_round}, as de antes ficam de fora`,
+      422,
+    );
   }
 
   const numbers = checkedNumbers(input.numbers);

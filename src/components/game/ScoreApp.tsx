@@ -245,11 +245,7 @@ export function ScoreApp() {
     return (
       <OutOfRoomScreen
         title="Você não está mais nesta mesa"
-        message={
-          state.room.phase === RoomPhase.Lobby
-            ? `Quem abriu a sala tirou você, ou o código ${state.room.code} já é de outra sala. Para entrar, use o código de novo.`
-            : `Quem abriu a sala tirou você, ou o código ${state.room.code} já é de outra partida. Como ela já começou, não dá para entrar nela.`
-        }
+        message={`Quem abriu a sala tirou você, ou o código ${state.room.code} já é de outra sala. Para entrar de novo, use o código.`}
         onHome={leaveForGood}
       />
     );

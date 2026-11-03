@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { missingLaunch, totalsByPlayer, withTotals } from "@/lib/game/round";
+import { missingLaunch, requiredPlayers, totalsByPlayer, withTotals } from "@/lib/game/round";
 import { joinNames } from "@/utils/plural";
 
 const people = [
@@ -59,6 +59,31 @@ describe("quem falta lançar", () => {
     const launched = people.map((person) => ({ player_id: person.id, round_number: 2 }));
 
     expect(missingLaunch(people, launched, 2)).toEqual([]);
+  });
+});
+
+describe("quem já está valendo na rodada", () => {
+  const table = [
+    { id: "a", joined_round: 1 },
+    { id: "b", joined_round: 1 },
+    { id: "c", joined_round: 5 },
+  ];
+
+  it("deixa de fora quem entra em rodada futura", () => {
+    expect(requiredPlayers(table, 4).map((person) => person.id)).toEqual(["a", "b"]);
+  });
+
+  it("inclui quem entra exatamente nesta rodada", () => {
+    expect(requiredPlayers(table, 5).map((person) => person.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("a rodada fecha sem esperar quem entrou depois", () => {
+    const launched = [
+      { player_id: "a", round_number: 4 },
+      { player_id: "b", round_number: 4 },
+    ];
+
+    expect(missingLaunch(requiredPlayers(table, 4), launched, 4)).toEqual([]);
   });
 });
 
