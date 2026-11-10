@@ -4,7 +4,7 @@ import { maxNameLength, maxPlayers, minPlayers } from "@/lib/game/limits";
 import { modifiers as allowedModifiers, highestCard, lowestCard } from "@/lib/game/rules";
 import { missingLaunch, requiredPlayers, totalsByPlayer, withTotals } from "@/lib/game/round";
 import { roundScore } from "@/lib/game/scoring";
-import { champions } from "@/lib/game/standings";
+import { champions, rank } from "@/lib/game/standings";
 import { serverClient } from "@/lib/supabase";
 import {
   ExitKind,
@@ -15,6 +15,7 @@ import {
   type RoomState,
 } from "@/types/room";
 import type { Modifier } from "@/lib/game/rules";
+import type { MatchEnding } from "@/types/history";
 
 export const maxCardsInHand = 12;
 
@@ -258,7 +259,7 @@ export async function startMatch(input: { code: string; token: string }) {
   checked(
     await serverClient()
       .from("fs_rooms")
-      .update({ phase: RoomPhase.Playing, round_number: 1 })
+      .update({ phase: RoomPhase.Playing, round_number: 1, started_at: new Date().toISOString() })
       .eq("id", room.id)
       .eq("phase", RoomPhase.Lobby),
   );
@@ -331,6 +332,7 @@ async function saveMatch(
   room: RoomRow,
   people: Array<{ id: string; name: string; total: number }>,
   winnerId: string,
+  closedBy: MatchEnding = "target",
 ) {
   if (room.is_test) {
     return;
@@ -342,6 +344,7 @@ async function saveMatch(
       room_code: room.code,
       winner_name: people.find((person) => person.id === winnerId)?.name ?? null,
       rounds: room.round_number,
+      closed_by: closedBy,
       players: people.map((person) => ({
         name: person.name,
         score: person.total,
@@ -582,3 +585,47 @@ export async function leaveRoom(input: { code: string; token: string }) {
 }
 
 export { ServiceError };
+
+export const staleMatchHours = 5;
+
+export async function closeStaleMatches(): Promise<string[]> {
+  const client = serverClient();
+  const deadline = new Date(Date.now() - staleMatchHours * 60 * 60 * 1000).toISOString();
+  const { data } = await client
+    .from("fs_rooms")
+    .select("*")
+    .eq("phase", RoomPhase.Playing)
+    .lt("started_at", deadline);
+
+  const stale = ((data ?? []) as RoomRow[]).filter((room) => room.started_at !== null);
+  const closed: string[] = [];
+
+  for (const room of stale) {
+    const people = await refreshTotals(room.id);
+    const leader = rank(people.map((person) => ({ playerId: person.id, total: person.total })))[0];
+    const done = checked(
+      await client
+        .from("fs_rooms")
+        .update({
+          phase: RoomPhase.Finished,
+          winner_player_id: leader?.playerId ?? null,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", room.id)
+        .eq("phase", RoomPhase.Playing)
+        .select("id"),
+    );
+
+    if ((done ?? []).length === 0) {
+      continue;
+    }
+
+    if (leader) {
+      await saveMatch(room, people, leader.playerId, "timeout");
+    }
+
+    closed.push(room.code);
+  }
+
+  return closed;
+}

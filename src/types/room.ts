@@ -26,6 +26,7 @@ export interface RoomRow {
   host_player_id: string | null;
   winner_player_id: string | null;
   created_at: string;
+  started_at: string | null;
   finished_at: string | null;
 }
 
