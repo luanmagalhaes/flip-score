@@ -240,6 +240,11 @@ export function ScoreApp() {
       await api.removePlayer(session.code, session.accessToken, playerId);
       await refresh();
     });
+  const changePhoto = (photo: Blob) =>
+    run(async () => {
+      await api.sendAvatar(session.code, session.accessToken, photo);
+      await refresh();
+    });
 
   if (!me && state.room.phase !== RoomPhase.Finished) {
     return (
@@ -289,12 +294,7 @@ export function ScoreApp() {
               await refresh();
             })
           }
-          onPhoto={(blob) =>
-            run(async () => {
-              await api.sendAvatar(session.code, session.accessToken, blob);
-              await refresh();
-            })
-          }
+          onPhoto={changePhoto}
         />
       </>
     );
@@ -374,6 +374,7 @@ export function ScoreApp() {
         onNewRound={() => setSheet({ roundNumber: state.room.round_number, entry: null })}
         onFixRound={(entry) => setSheet({ roundNumber: entry.round_number, entry })}
         onRemovePlayer={removePlayer}
+        onPhoto={changePhoto}
         onOpenMine={() => setListingMine(true)}
         onRules={() => setAskedRules(true)}
         onLeave={leave}

@@ -117,6 +117,12 @@ button:disabled {
   backface-visibility: hidden;
 }
 
+@utility photo-veil {
+  background: color-mix(in srgb, var(--color-ink) 74%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(118%);
+  backdrop-filter: blur(10px) saturate(118%);
+}
+
 @keyframes foil-slide {
   from { background-position: 0% 50%; }
   to { background-position: 200% 50%; }
@@ -136,6 +142,16 @@ button:disabled {
 @keyframes rise-in {
   from { transform: translate3d(0, 22px, 0); opacity: 0; }
   to { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+
+@keyframes veil-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes photo-pop {
+  from { transform: translate3d(0, 14px, 0) scale(0.92); opacity: 0; }
+  to { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
 }
 
 @keyframes score-bump {
@@ -173,6 +189,16 @@ button:disabled {
 
 @utility animate-rise-in {
   animation: rise-in 420ms var(--ease-snap) both;
+  will-change: transform, opacity;
+}
+
+@utility animate-veil-in {
+  animation: veil-in 200ms ease-out both;
+  will-change: opacity;
+}
+
+@utility animate-photo-pop {
+  animation: photo-pop 320ms var(--ease-snap) both;
   will-change: transform, opacity;
 }
 

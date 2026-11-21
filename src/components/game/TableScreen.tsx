@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { InviteModal } from "@/components/game/InviteModal";
+import { MyFace } from "@/components/game/MyFace";
 import { WaitingModal } from "@/components/game/WaitingModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +29,7 @@ interface TableScreenProps {
   onFixRound: (entry: EntryRow) => void;
   onOpenMine: () => void;
   onRemovePlayer: (playerId: string) => void;
+  onPhoto: (photo: Blob) => void;
   onRules: () => void;
   onLeave: () => void;
 }
@@ -58,6 +60,7 @@ export function TableScreen({
   onFixRound,
   onOpenMine,
   onRemovePlayer,
+  onPhoto,
   onRules,
   onLeave,
 }: TableScreenProps) {
@@ -227,6 +230,16 @@ export function TableScreen({
           ← Sair
         </button>
         <div className="flex items-center gap-2">
+          {me ? (
+            <MyFace
+              name={me.name}
+              photo={me.avatar}
+              emoji={me.emoji}
+              size="sm"
+              busy={busy}
+              onPhoto={onPhoto}
+            />
+          ) : null}
           <button
             type="button"
             onClick={() => onQuiet(!quiet)}

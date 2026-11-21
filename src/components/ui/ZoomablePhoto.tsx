@@ -6,23 +6,52 @@ import { PhotoViewer } from "@/components/ui/PhotoViewer";
 
 type AvatarProps = Parameters<typeof Avatar>[0];
 
-export function ZoomablePhoto(props: AvatarProps) {
+type ZoomablePhotoProps = AvatarProps & {
+  canEdit?: boolean;
+  busy?: boolean;
+  onEdit?: () => void;
+};
+
+function openLabelFor(name: string, photo: string | null): string {
+  return photo ? `Ver a foto de ${name}` : `Pôr uma foto de ${name}`;
+}
+
+export function ZoomablePhoto({
+  canEdit = false,
+  busy = false,
+  onEdit,
+  ...avatar
+}: ZoomablePhotoProps) {
   const [open, setOpen] = useState(false);
 
-  if (!props.photo) {
-    return <Avatar {...props} />;
+  if (!avatar.photo && !canEdit) {
+    return <Avatar {...avatar} />;
   }
 
   return (
     <>
-      {open ? <PhotoViewer name={props.name} photo={props.photo} onClose={() => setOpen(false)} /> : null}
+      {open ? (
+        <PhotoViewer
+          name={avatar.name}
+          photo={avatar.photo}
+          emoji={avatar.emoji ?? null}
+          canEdit={canEdit}
+          busy={busy}
+          onEdit={() => {
+            setOpen(false);
+            onEdit?.();
+          }}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Ver a foto de ${props.name}`}
-        className="shrink-0 rounded-2xl transition-transform active:scale-95"
+        aria-label={openLabelFor(avatar.name, avatar.photo)}
+        className="shrink-0 cursor-pointer rounded-2xl transition-transform active:scale-95"
       >
-        <Avatar {...props} />
+        <Avatar {...avatar} />
       </button>
     </>
   );
